@@ -1,0 +1,2718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>CRP Notes v3.0</title>
+<script>
+(function(){
+  var t = null;
+  try { t = localStorage.getItem('acquire.theme'); } catch(e){}
+  if (!t) t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<noscript><style>
+  .brand .ver{ max-width:56px; margin-left:7px; opacity:1; }
+  .brand .caret{ animation:none; }
+</style></noscript>
+<style>
+  /* ============ Design tokens ============ */
+  html{
+    --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, "DejaVu Sans Mono", monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  html[data-theme="light"]{
+    color-scheme: light;
+    --bg:#ebe8df; --paper:#f6f4ee; --field:#fdfcf8;
+    --ink:#232019; --mut:#716a59;
+    --line:#d8d2c2; --line2:#b9b09a;
+    --acc:#9c4a21; --acc-hover:#86391a;
+    --btn-ink:#f7f2e8; --tick-ink:#f7f2e8;
+    --ring:rgba(156,74,33,.30); --zone:rgba(156,74,33,.08);
+    --warn:#a23c25; --shade:rgba(30,25,15,.10);
+    --ok:#2f7d32; --amber:#b8860b;
+  }
+  html[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#141210; --paper:#1b1814; --field:#0f0d0a;
+    --ink:#e8e2d3; --mut:#8e8574;
+    --line:#342e24; --line2:#58503f;
+    --acc:#dc8f52; --acc-hover:#e79f66;
+    --btn-ink:#191512; --tick-ink:#191512;
+    --ring:rgba(220,143,82,.32); --zone:rgba(220,143,82,.10);
+    --warn:#c56a48; --shade:rgba(0,0,0,.45);
+    --ok:#6fbf73; --amber:#e0b341;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font:13.5px/1.5 var(--mono);
+    padding:0 clamp(14px,4vw,36px) 40px;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--acc); color:var(--btn-ink); }
+  *{ scrollbar-width:thin; scrollbar-color:var(--line2) transparent; }
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line2); border-radius:8px; border:2px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  [hidden]{ display:none !important; }
+  :focus-visible{ outline:2px solid var(--acc); outline-offset:2px; }
+  button{ font-family:var(--mono); color:inherit; }
+
+  /* ============ Masthead ============ */
+  .mast{
+    max-width:1180px; margin:0 auto;
+    display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+    padding:16px 0 14px;
+    border-bottom:3px double var(--ink);
+  }
+  .brandWrap{ display:flex; flex-direction:column; }
+  .oem{
+    font-size:26px; font-weight:800; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--ink); margin:0 0 4px;
+    min-height:1.5em;
+  }
+  .brand{
+    margin:0; font-size:20px; font-weight:800; letter-spacing:-.01em; line-height:1;
+  }
+  .brand .ver{
+    display:inline-block; overflow:hidden; white-space:nowrap;
+    max-width:0; margin-left:0; opacity:0;
+    font-size:11px; font-weight:600; letter-spacing:.06em; color:var(--mut);
+    transition:max-width .45s ease, margin-left .45s ease, opacity .45s ease;
+  }
+  .brand.ver-in .ver{ max-width:56px; margin-left:7px; opacity:1; }
+  .brand .caret{
+    display:inline-block; width:.5em; height:.82em; margin-left:6px;
+    background:var(--acc); vertical-align:-2%;
+    animation:blink 1.15s steps(1) infinite;
+  }
+  .brand.typing .caret{ animation:none; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .tools{ display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+
+  .ctr{
+    display:inline-flex; align-items:center; gap:7px;
+    border:1px dashed var(--line2); border-radius:4px;
+    padding:8px 11px;
+    font-size:9.5px; letter-spacing:.14em; font-weight:700; color:var(--mut);
+  }
+  .ctr b{ font-size:13px; letter-spacing:0; color:var(--acc); }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+    padding:9px 14px; border:1px solid var(--line2); border-radius:4px;
+    background:transparent; cursor:pointer;
+    transition:transform .12s, border-color .15s, background .15s, box-shadow .15s;
+  }
+  .btn:hover{ transform:translateY(-1px); border-color:var(--mut); box-shadow:0 3px 10px var(--shade); }
+  .btn:active{ transform:translateY(0); box-shadow:none; }
+  .btn svg{ width:14px; height:14px; flex:none; }
+  .btn.solid{ background:var(--acc); border-color:var(--acc); color:var(--btn-ink); }
+  .btn.solid:hover{ background:var(--acc-hover); border-color:var(--acc-hover); }
+  .btn.armed{ border-color:var(--warn); color:var(--warn); }
+  .btn.solid.armed{ background:var(--warn); border-color:var(--warn); color:var(--btn-ink); }
+  .icon-btn{ padding:9px 11px; }
+  #themeBtn .ico-sun{ display:none; }
+  html[data-theme="light"] #themeBtn .ico-moon{ display:none; }
+  html[data-theme="light"] #themeBtn .ico-sun{ display:block; }
+
+  #discBtn{ border-color:var(--warn); color:var(--warn); }
+  #discBtn:hover{ border-color:var(--warn); color:var(--warn); box-shadow:0 3px 10px var(--shade); }
+
+  /* ============ Tab strip ============ */
+  .tabs{
+    max-width:1180px; margin:0 auto;
+    display:flex; gap:6px;
+    padding:14px 0 0;
+    border-bottom:1px solid var(--line);
+  }
+  .tab{
+    appearance:none; border:1px solid var(--line2); border-bottom:0;
+    background:transparent; color:var(--mut);
+    font:700 11px var(--mono); letter-spacing:.16em; text-transform:uppercase;
+    padding:10px 18px 9px; border-radius:5px 5px 0 0;
+    cursor:pointer; margin-bottom:-1px;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .tab:hover{ color:var(--ink); border-color:var(--mut); }
+  .tab[aria-selected="true"]{
+    background:var(--paper); color:var(--ink);
+    border-color:var(--line2); border-bottom:1px solid var(--paper);
+  }
+  .tab .kbdHint{
+    font-size:9px; color:var(--mut); margin-left:7px; letter-spacing:.08em;
+  }
+  .tab[aria-selected="true"] .kbdHint{ color:var(--acc); }
+
+  /* ============ Layout ============ */
+  .wrap{
+    max-width:1180px; margin:0 auto;
+    display:grid; grid-template-columns:minmax(0,1fr) 410px; gap:26px;
+    padding-top:24px; align-items:start;
+  }
+  .wrap.wide{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:1020px){
+    .wrap{ grid-template-columns:minmax(0,1fr); }
+  }
+
+  /* ============ Form sheet ============ */
+  .sheet{ min-width:0; }
+  .sec{ padding:4px 0 20px; }
+  .sec + .sec{ border-top:1px dashed var(--line2); padding-top:20px; }
+  .sh{ display:flex; align-items:baseline; gap:11px; margin:0 0 15px; }
+  .sh .num{
+    font-size:10px; color:var(--mut); border:1px solid var(--line2);
+    padding:2px 6px; border-radius:3px; letter-spacing:.08em;
+  }
+  .sh h2{
+    margin:0; font-size:12px; font-weight:700;
+    letter-spacing:.18em; text-transform:uppercase;
+  }
+  .sh .meta{ margin-left:auto; font:italic 12px var(--sans); color:var(--mut); }
+
+  .g{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px 15px; }
+  .s2{ grid-column:span 2; } .s3{ grid-column:span 3; }
+  .s4{ grid-column:span 4; } .s6{ grid-column:span 6; }
+
+  .lab{
+    display:block; margin-bottom:6px;
+    font-size:10px; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--mut); font-weight:700;
+  }
+  .hin{ font-size:11px; color:var(--mut); margin-top:6px; }
+
+  .unitBlock{ margin-bottom:15px; }
+  .unitBlock .tog{ margin-bottom:9px; }
+  .unitBlock .hin{ margin:0 0 10px; }
+
+  #dispBody{ transition:opacity .15s; }
+  #dispBody.off{ opacity:.4; pointer-events:none; user-select:none; }
+
+  :where(.g input, .g textarea, .g select, .stack input, .stack textarea, .unitBlock input, .fld input, .fld select){
+    width:100%; font:13.5px/1.45 var(--mono); color:var(--ink);
+    background:var(--field); border:1px solid var(--line2); border-radius:4px;
+    padding:9px 10px; transition:border-color .15s, box-shadow .15s;
+  }
+  :where(.g input, .g textarea, .g select, .stack input, .stack textarea, .unitBlock input, .fld input, .fld select)::placeholder{ color:var(--mut); opacity:.6; }
+  :where(.g input, .g textarea, .g select, .stack input, .stack textarea, .unitBlock input, .fld input, .fld select):hover{ border-color:var(--mut); }
+  :where(.g input, .g textarea, .g select, .stack input, .stack textarea, .unitBlock input, .fld input, .fld select):focus{
+    outline:none; border-color:var(--acc); box-shadow:0 0 0 3px var(--ring);
+  }
+  :where(textarea){ resize:vertical; min-height:64px; }
+
+  select{
+    appearance:none; -webkit-appearance:none;
+    padding-right:30px !important; cursor:pointer;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b9b09a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center;
+  }
+  html[data-theme="dark"] select{
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8574' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .cur{ position:relative; }
+  .cur::before{
+    content:'$'; position:absolute; left:10px; top:50%; transform:translateY(-50%);
+    color:var(--mut); font-weight:700; pointer-events:none;
+  }
+  .cur input{ padding-left:22px !important; }
+
+  .withbtn{ position:relative; }
+  .withbtn input{ padding-right:56px; }
+  .nobtn{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    font-size:9px; letter-spacing:.12em; font-weight:700;
+    border:1px solid var(--line2); border-radius:3px; background:var(--paper);
+    color:var(--mut); padding:4px 7px; cursor:pointer; transition:.15s;
+  }
+  .nobtn:hover{ color:var(--acc); border-color:var(--acc); }
+
+  .tog, .chip{
+    position:relative; display:inline-flex; align-items:center; gap:9px;
+    border:1px solid var(--line2); border-radius:4px; background:var(--field);
+    padding:9px 13px 9px 10px; cursor:pointer; user-select:none;
+    font-size:11px; letter-spacing:.08em; font-weight:700;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .tog:hover, .chip:hover{ border-color:var(--mut); }
+  .tog input, .chip input{ position:absolute; opacity:0; pointer-events:none; }
+  .tick{
+    width:13px; height:13px; flex:none; position:relative;
+    border:1.5px solid var(--mut); border-radius:3px;
+    transition:background .15s, border-color .15s;
+  }
+  .tick::after{
+    content:''; position:absolute; left:3.2px; top:.6px;
+    width:4px; height:7.5px;
+    border-right:2px solid var(--tick-ink); border-bottom:2px solid var(--tick-ink);
+    transform:rotate(43deg); opacity:0; transition:opacity .12s;
+  }
+  .tog input:checked + .tick,
+  .chip input:checked + .tick{ background:var(--acc); border-color:var(--acc); }
+  .tog input:checked + .tick::after,
+  .chip input:checked + .tick::after{ opacity:1; }
+  .tog:has(input:checked), .chip:has(input:checked){ border-color:var(--acc); color:var(--acc); }
+  .tog input:focus-visible + .tick,
+  .chip input:focus-visible + .tick{ outline:2px solid var(--acc); outline-offset:2px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom:15px; }
+  .prefRow{ display:flex; flex-wrap:wrap; gap:11px; align-items:flex-start; }
+  .prefRow .grow{ flex:1 1 230px; min-width:0; }
+
+  input:disabled{ border-style:dashed !important; opacity:.62; cursor:not-allowed; }
+
+  fieldset.rst{ border:0; margin:0; padding:0; min-width:0; }
+  .segwrap{ display:flex; }
+  .segwrap label{ flex:1; position:relative; }
+  .segwrap input{ position:absolute; opacity:0; pointer-events:none; }
+  .segwrap span{
+    display:block; text-align:center; padding:9px 3px; cursor:pointer;
+    border:1px solid var(--line2); background:var(--field); color:var(--mut);
+    font-size:10px; letter-spacing:.06em; font-weight:700; line-height:1.3;
+    transition:background .15s, color .15s, border-color .15s;
+    margin-left:-1px;
+  }
+  .segwrap label:first-child span{ border-radius:4px 0 0 4px; margin-left:0; }
+  .segwrap label:last-child span{ border-radius:0 4px 4px 0; }
+  .segwrap label:hover span{ border-color:var(--mut); color:var(--ink); z-index:1; position:relative; }
+  .segwrap input:checked + span{
+    background:var(--ink); color:var(--paper); border-color:var(--ink); z-index:2; position:relative;
+  }
+  .segwrap input:focus-visible + span{ outline:2px solid var(--acc); outline-offset:1px; z-index:3; position:relative; }
+
+  .dock{
+    background:var(--paper); border:1px solid var(--line); border-radius:8px;
+    padding:15px 15px 13px; box-shadow:0 12px 34px var(--shade);
+  }
+  @media (min-width:1021px){
+    .dock{ position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; }
+  }
+  .dHead{ display:flex; align-items:center; gap:10px; }
+  .dTitle{ font-size:10.5px; letter-spacing:.2em; color:var(--mut); font-weight:700; }
+  .dLive{ margin-left:auto; display:flex; align-items:center; gap:6px; font-size:9.5px; letter-spacing:.14em; color:var(--mut); }
+  .dLive i{ width:8px; height:8px; border-radius:50%; background:var(--acc); transition:background .2s; }
+  .dLive.held i{ background:var(--line2); }
+
+  #preview{
+    font:12.5px/1.68 var(--mono); color:var(--ink);
+    white-space:pre-wrap; word-break:break-word;
+    margin:11px 0 0; padding:11px 12px;
+    background:var(--field); border:1px solid var(--line); border-radius:5px;
+    min-height:150px; max-height:44vh; overflow:auto;
+  }
+  .zz{ transition:background .18s, box-shadow .18s; }
+  .zz.hot{ background:var(--zone); box-shadow:inset 2.5px 0 0 var(--acc); }
+  .zz.lead{ color:var(--acc); font-weight:700; letter-spacing:.12em; }
+
+  .perf{ border:0; border-top:1px dashed var(--line2); margin:14px 0 12px; }
+
+  .outBox{ border:1px solid var(--line2); border-radius:5px; background:var(--field); transition:border-color .2s, box-shadow .2s; }
+  .outBox:focus-within{ border-color:var(--acc); box-shadow:0 0 0 3px var(--ring); }
+  #output{
+    display:block; width:100%; min-height:195px; resize:vertical;
+    font:12.5px/1.68 var(--mono); color:var(--ink);
+    background:transparent; border:0; padding:11px 12px; border-radius:5px;
+  }
+  #output:focus{ outline:none; }
+  .outBox.flash{ animation:pulse .8s ease; }
+  @keyframes pulse{ 0%,55%{ border-color:var(--acc); } }
+
+  .outStat{ margin-top:9px; font-size:10.5px; letter-spacing:.06em; color:var(--mut); display:flex; align-items:center; gap:7px; }
+  .outStat i{ width:7px; height:7px; border-radius:50%; background:var(--acc); flex:none; transition:background .2s; }
+  .outStat.held i{ background:var(--line2); }
+  .outBtns{ display:flex; gap:9px; margin-top:10px; }
+  .outBtns .solid{ flex:1; justify-content:center; }
+  .kbd{ margin-top:9px; text-align:center; font:italic 11px/1.6 var(--sans); color:var(--mut); }
+
+  /* Live warning pill above Generate/Copy */
+  .warnPill{
+    display:none; align-items:center; gap:6px;
+    margin-top:9px; padding:7px 10px;
+    border:1px dashed var(--warn); border-radius:5px;
+    font:700 10.5px var(--mono); letter-spacing:.06em; color:var(--warn);
+    background:transparent; cursor:pointer; text-align:left; width:100%;
+    transition:background .15s;
+  }
+  .warnPill:hover{ background:color-mix(in srgb, var(--warn) 8%, transparent); }
+  .warnPill.on{ display:flex; }
+  .warnPill svg{ width:13px; height:13px; flex:none; }
+  .warnPill .wn{ margin-left:auto; font-weight:800; }
+
+  .quick{ margin-bottom:12px; }
+  .quick .dTitle{ display:block; margin-bottom:8px; }
+  .quick .outBtns{ margin-top:0; flex-wrap:wrap; }
+
+  /* ============ Tools tab ============ */
+  .toolStack{ display:grid; gap:20px; }
+  .panel{
+    background:var(--paper); border:1px solid var(--line); border-radius:8px;
+    padding:16px 18px 18px; box-shadow:0 6px 22px var(--shade);
+  }
+  .pH{ display:flex; align-items:center; gap:11px; margin-bottom:14px; }
+  .pH .pn{
+    font-size:10px; color:var(--mut); border:1px solid var(--line2);
+    padding:2px 6px; border-radius:3px; letter-spacing:.08em;
+  }
+  .pH h2{
+    margin:0; font-size:12px; font-weight:700;
+    letter-spacing:.18em; text-transform:uppercase;
+  }
+  .pH .pmeta{ margin-left:auto; font:italic 12px var(--sans); color:var(--mut); }
+
+  .fld{ min-width:0; }
+  .fRow{ display:grid; gap:14px 15px; grid-template-columns:repeat(6,1fr); }
+  .f2{ grid-column:span 2; } .f3{ grid-column:span 3; } .f4{ grid-column:span 4; } .f6{ grid-column:span 6; }
+  @media (max-width:720px){
+    .fRow{ grid-template-columns:1fr; }
+    .fRow > *{ grid-column:auto !important; }
+  }
+
+  .resultBox{
+    margin-top:16px; padding:13px 15px;
+    background:var(--field); border:1px solid var(--line); border-radius:6px;
+    font-size:13px; line-height:1.75;
+  }
+  .resultBox .row{ display:flex; justify-content:space-between; gap:14px; }
+  .resultBox .row b{ color:var(--acc); font-weight:700; letter-spacing:.02em; }
+  .resultBox .big{ font-size:15px; }
+  .resultBox .big b{ font-size:16px; }
+  .resultBox .sep{ border-top:1px dashed var(--line2); margin:9px 0; }
+  .resultBox .empty{ color:var(--mut); font-style:italic; }
+  .quickPct{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pctChip{
+    appearance:none; cursor:pointer;
+    border:1px solid var(--line2); background:var(--field); color:var(--ink);
+    font:700 11px var(--mono); letter-spacing:.08em;
+    padding:7px 11px; border-radius:4px; transition:.15s;
+  }
+  .pctChip:hover{ border-color:var(--acc); color:var(--acc); }
+
+  .clockHead{
+    display:flex; align-items:baseline; justify-content:space-between; gap:14px;
+    padding-bottom:11px; margin-bottom:4px; border-bottom:1px dashed var(--line2);
+    font-size:12px; color:var(--mut);
+  }
+  .clockHead b{ color:var(--ink); font-weight:700; letter-spacing:.04em; }
+  .clockList{ list-style:none; margin:0; padding:0; }
+  .clockRow{
+    display:grid; grid-template-columns:16px minmax(150px,1.3fr) 110px 80px 90px auto;
+    align-items:center; gap:12px;
+    padding:11px 4px;
+    border-bottom:1px dashed var(--line);
+    cursor:pointer; transition:background .15s;
+  }
+  .clockRow:last-child{ border-bottom:0; }
+  .clockRow:hover{ background:var(--zone); }
+  .dot{ width:11px; height:11px; border-radius:50%; background:var(--line2); flex:none; }
+  .dot.ok{ background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+  .dot.amber{ background:var(--amber); box-shadow:0 0 0 3px color-mix(in srgb, var(--amber) 22%, transparent); }
+  .dot.red{ background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent); }
+  .clockRow .name{ font-weight:700; letter-spacing:.04em; }
+  .clockRow .name small{ display:block; color:var(--mut); font-weight:600; font-size:10px; letter-spacing:.1em; margin-top:2px; }
+  .clockRow .time{ font-weight:700; font-size:14px; letter-spacing:.02em; }
+  .clockRow .tz{ color:var(--mut); font-size:11px; }
+  .clockRow .off{ color:var(--mut); font-size:11px; text-align:right; }
+  .clockRow .badge{
+    font:700 9px var(--mono); letter-spacing:.12em;
+    padding:4px 7px; border-radius:3px; border:1px solid var(--line2); color:var(--mut);
+    text-align:center;
+  }
+  .clockRow .badge.ok{ border-color:var(--ok); color:var(--ok); }
+  .clockRow .badge.amber{ border-color:var(--amber); color:var(--amber); }
+  .clockRow .badge.red{ border-color:var(--warn); color:var(--warn); }
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--mut); margin-top:12px; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+
+  .cbOut{
+    margin-top:16px; padding:13px 15px;
+    background:var(--field); border:1px solid var(--line); border-radius:6px;
+  }
+  .cbOut .cbLine{ font-size:14px; line-height:1.7; }
+  .cbOut .cbLine b{ color:var(--acc); }
+  .cbOut .cbSmall{ margin-top:6px; font:italic 12px var(--sans); color:var(--mut); }
+  .cbQuote{
+    margin-top:12px; padding:11px 13px;
+    border:1px dashed var(--line2); border-radius:5px; background:var(--paper);
+    font-size:12.5px; line-height:1.6;
+  }
+  .cbQuote b{ color:var(--ink); }
+  .cbQuick{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .cbQuick .pctChip{ min-width:88px; text-align:center; }
+
+  /* ============ Modals ============ */
+  .ovl{
+    position:fixed; inset:0; z-index:50;
+    background:var(--shade);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal{
+    background:var(--paper); border:1px solid var(--line2); border-radius:8px;
+    box-shadow:0 18px 50px var(--shade);
+    max-width:460px; width:100%; padding:16px 18px 14px;
+  }
+  .modal.wide{ max-width:620px; }
+  .mHead{ display:flex; align-items:center; }
+  .mClose{
+    margin-left:auto; border:0; background:none; cursor:pointer;
+    font-size:20px; line-height:1; color:var(--mut);
+    padding:2px 7px; border-radius:4px;
+  }
+  .mClose:hover{ color:var(--acc); }
+  .kbList{ list-style:none; margin:12px 0 10px; padding:0; }
+  .kbList li{
+    display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+    padding:7px 0; border-bottom:1px dashed var(--line); font-size:12px;
+  }
+  .kbList li:last-child{ border-bottom:0; }
+  .kbList .keys{ font-weight:700; white-space:nowrap; color:var(--acc); }
+  .kbHead{ padding:9px 0 4px; font:700 10px var(--mono); letter-spacing:.18em; color:var(--mut); }
+  .kbHead:first-child{ padding-top:2px; }
+  .mNote{ font:italic 11px/1.5 var(--sans); color:var(--mut); margin:2px 0 0; }
+  .mBtns{ display:flex; gap:9px; margin-top:14px; }
+  .mBtns .btn{ flex:1; justify-content:center; }
+  .missList li{ justify-content:flex-start; gap:8px; }
+  .missList li::before{ content:'\2022'; color:var(--warn); font-weight:700; }
+  .missList .mf{ color:var(--warn); font-weight:700; letter-spacing:.04em; }
+
+  .discBody{
+    margin:12px 0 0;
+    padding:13px 15px;
+    background:var(--field); border:1px solid var(--line); border-radius:6px;
+    max-height:56vh; overflow:auto;
+    font:12.5px/1.7 var(--mono); color:var(--ink);
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .discTag{
+    display:inline-flex; align-items:center; gap:6px;
+    font:700 9px var(--mono); letter-spacing:.16em;
+    padding:3px 7px; border-radius:3px;
+    border:1px solid var(--acc); color:var(--acc);
+    margin-bottom:9px;
+  }
+
+  .foot{
+    max-width:1180px; margin:30px auto 0; padding-top:14px;
+    border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    font:italic 12px var(--sans); color:var(--mut);
+  }
+  .foot .remind{ flex-basis:100%; color:var(--acc); font-weight:600; }
+  #toasts{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column-reverse; gap:8px; z-index:99;
+    pointer-events:none;
+  }
+  .toast{
+    display:flex; align-items:center; gap:9px;
+    background:var(--ink); color:var(--paper);
+    border-radius:6px; padding:10px 15px;
+    font:12px var(--mono); letter-spacing:.04em;
+    opacity:0; transform:translateY(10px); transition:opacity .25s, transform .25s;
+  }
+  .toast.in{ opacity:1; transform:none; }
+  .toast.bad{ background:var(--warn); color:var(--btn-ink); }
+  .toast.act{ pointer-events:auto; }
+  .toastBtn{
+    margin-left:6px; padding:4px 11px; cursor:pointer;
+    font:700 11px var(--mono); letter-spacing:.1em; text-transform:uppercase;
+    background:transparent; color:inherit; border:1px solid currentColor; border-radius:4px;
+  }
+  .toastBtn:hover{ background:var(--paper); color:var(--ink); border-color:var(--paper); }
+  .toast svg{ width:14px; height:14px; flex:none; }
+
+  @media (max-width:720px){
+    .g{ grid-template-columns:1fr; }
+    .g > *{ grid-column:auto !important; }
+    .sh .meta{ display:none; }
+    .clockRow{ grid-template-columns:14px 1fr auto; row-gap:4px; }
+    .clockRow .tz, .clockRow .off{ display:none; }
+    .clockRow .badge{ grid-column:3; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+  .missList li{ align-items:flex-start; }
+  .missList .mf{ font-weight:600; letter-spacing:.01em; line-height:1.45; }
+
+  /* ============ Callback: warnings inside the result ============ */
+  .cbOut .empty{ color:var(--mut); font-style:italic; }
+  .cbOut .empty.bad{ color:var(--warn); font-style:normal; font-weight:700; }
+  .cbOut .cbSmall.bad{ color:var(--warn); font-style:normal; font-weight:700; }
+
+  /* ============ Phonetic spelling ============ */
+  .modal.phWide{ max-width:900px; }
+  .phText{
+    margin:8px 0 2px; font:700 22px/1.35 var(--mono); letter-spacing:.06em;
+    word-break:break-all; color:var(--ink);
+  }
+  .phGroups{
+    display:flex; flex-direction:column; gap:14px; margin-top:12px;
+    max-height:58vh; overflow:auto; padding:2px;
+  }
+  .phGroup{ display:flex; flex-wrap:wrap; gap:8px; }
+  .phGroup + .phGroup{ padding-top:14px; border-top:1px dashed var(--line2); }
+  .phTile{
+    appearance:none; cursor:pointer; min-width:80px; padding:10px 8px 9px; text-align:center;
+    background:var(--field); color:var(--ink); border:1px solid var(--line2); border-radius:6px;
+    font-family:var(--mono); transition:opacity .15s, border-color .15s, background .15s;
+  }
+  .phTile:hover{ border-color:var(--acc); }
+  .phTile .ch{ display:block; font-size:32px; font-weight:700; line-height:1.1; color:var(--acc); }
+  .phTile .wd{ display:block; margin-top:5px; font-size:13px; font-weight:700; letter-spacing:.04em; }
+  .phTile .tg{ display:block; margin-top:3px; font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--mut); }
+  .phTile.done{ opacity:.35; background:transparent; }
+  .phTile.done .ch::after{ content:' \2713'; font-size:15px; }
+
+  /* ============ Prompts tab ============ */
+  .cmdGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:9px; }
+  .cmdChip{
+    appearance:none; cursor:pointer; text-align:left;
+    background:var(--field); color:var(--ink);
+    border:1px solid var(--line2); border-radius:5px;
+    padding:9px 11px; font-family:var(--mono);
+    transition:border-color .15s, transform .12s, box-shadow .15s;
+  }
+  .cmdChip:hover{ border-color:var(--acc); transform:translateY(-1px); box-shadow:0 3px 10px var(--shade); }
+  .cmdChip:active{ transform:none; box-shadow:none; }
+  .cmdChip b{ display:block; font-size:13px; font-weight:700; letter-spacing:.06em; }
+  .cmdChip small{ display:block; margin-top:3px; font-size:10px; line-height:1.45; color:var(--mut); }
+
+  .promptList{ display:grid; gap:10px; }
+  .promptCard{ border:1px solid var(--line2); border-radius:6px; background:var(--field); }
+  .pcHead{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:6px 8px; }
+  .pcToggle{
+    flex:1; min-width:0; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    background:transparent; border:0; cursor:pointer; text-align:left; padding:6px;
+    font-family:var(--mono); color:inherit;
+  }
+  .pcToggle b{ font-size:12.5px; font-weight:700; letter-spacing:.05em; }
+  .pcToggle small{ font:italic 11px var(--sans); color:var(--mut); }
+  .pcToggle .chev{ margin-left:auto; flex:none; color:var(--mut); transition:transform .18s, color .18s; }
+  .pcToggle .chev svg{ width:14px; height:14px; display:block; }
+  .promptCard.open .chev{ transform:rotate(180deg); color:var(--acc); }
+  .pcCopy{ flex:none; }
+  .pcBody{ padding:0 8px 8px; }
+  .pcText{
+    white-space:pre-wrap; word-break:break-word;
+    font-size:11.5px; line-height:1.65; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:5px;
+    padding:11px 12px; max-height:44vh; overflow:auto;
+  }
+
+  .flowList{ list-style:none; margin:0; padding:0; counter-reset:wf; }
+  .flowList li{
+    counter-increment:wf; position:relative;
+    padding:10px 0 10px 44px; border-bottom:1px dashed var(--line);
+    font-size:12.5px; line-height:1.65;
+  }
+  .flowList li:last-child{ border-bottom:0; }
+  .flowList li::before{
+    content:counter(wf,decimal-leading-zero);
+    position:absolute; left:0; top:11px;
+    font-size:10px; font-weight:700; letter-spacing:.08em; color:var(--acc);
+    border:1px solid var(--line2); border-radius:3px; padding:2px 6px;
+  }
+  .flowList b{ letter-spacing:.03em; }
+  .remList{ list-style:none; margin:0; padding:0; }
+  .remList li{
+    display:flex; gap:10px; align-items:baseline;
+    padding:9px 0; border-bottom:1px dashed var(--line);
+    font-size:12.5px; line-height:1.65;
+  }
+  .remList li:last-child{ border-bottom:0; }
+  .remList li::before{ content:'\25B8'; color:var(--acc); font-weight:700; flex:none; }
+  .remList b{ color:var(--acc); letter-spacing:.03em; }
+
+  .remSub{
+    margin:18px 0 10px;
+    font-size:10px; font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase;
+    color:var(--mut);
+  }
+
+  /* ============ Outbound scripts (opener popup) ============ */
+  .opTop{ display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .opTop select{ flex:1; min-width:0; }
+  .opTop .btn{ flex:none; }
+  .opSteps{ margin:12px 0 0; display:grid; gap:10px; max-height:52vh; overflow:auto; }
+  .opStep{
+    padding:12px 14px;
+    background:var(--field); border:1px solid var(--line); border-radius:6px;
+    font:12.5px/1.7 var(--mono); color:var(--ink);
+  }
+  .opStep .osh{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .opStep .n{
+    font-size:10px; font-weight:700; letter-spacing:.08em;
+    color:var(--acc); border:1px solid var(--line2); border-radius:3px;
+    padding:2px 6px;
+  }
+  .opStep .t{ white-space:pre-wrap; word-break:break-word; }
+  .opStep .t b{ color:var(--acc); }
+  .opNote{
+    margin-top:12px; padding:11px 13px;
+    border:1px dashed var(--amber); border-radius:5px;
+    background:var(--paper);
+    font:12px/1.65 var(--mono); color:var(--ink);
+  }
+  .opNote b{ color:var(--amber); letter-spacing:.06em; }
+  .opEd{ display:grid; gap:12px; margin-top:10px; }
+  .opEd input, .opEd textarea{
+    width:100%; font:13.5px/1.45 var(--mono); color:var(--ink);
+    background:var(--field); border:1px solid var(--line2); border-radius:4px;
+    padding:9px 10px; transition:border-color .15s, box-shadow .15s;
+  }
+  .opEd input::placeholder, .opEd textarea::placeholder{ color:var(--mut); opacity:.6; }
+  .opEd input:hover, .opEd textarea:hover{ border-color:var(--mut); }
+  .opEd input:focus, .opEd textarea:focus{
+    outline:none; border-color:var(--acc); box-shadow:0 0 0 3px var(--ring);
+  }
+  .opEd textarea{ resize:vertical; }
+  #opTextIn{ min-height:180px; line-height:1.6; }
+  #opNoteIn{ min-height:52px; }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="brandWrap">
+    <div class="oem" role="img" aria-label="SAMSUNG"><span id="oemType">SAMSUNG</span></div>
+    <h1 class="brand" aria-label="CRP Notes v3.0"><span id="brandType">CRP Notes</span><span class="ver" id="brandVer">v3.0</span><span class="caret" aria-hidden="true"></span></h1>
+  </div>
+  <div class="tools">
+    <button type="button" id="opBtn" class="btn" title="Outbound scripts — view, edit, add (Alt + Q)" aria-label="Open outbound scripts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+      Opener
+    </button>
+    <button type="button" id="discBtn" class="btn" title="Read the voucher disclaimer to the customer (Alt + W)" aria-label="Open disclaimer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+        <path d="M12 9v4M12 17h.01"/>
+      </svg>
+      Disclaimer
+    </button>
+    <button type="button" id="helpBtn" class="btn icon-btn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+    </button>
+    <button type="button" id="themeBtn" class="btn icon-btn" title="Toggle dark / light mode" aria-label="Toggle theme">
+      <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <button type="button" id="resetBtn" class="btn" title="Clear the form for the next call">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+      <span id="rsTxt">Reset</span>
+    </button>
+    <span class="ctr" title="Notes copied on this machine (reference only)"><span>NOTES</span><b id="noteCount">0</b></span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Workspace tabs">
+  <button type="button" class="tab" id="tab-crp" role="tab" aria-selected="true" aria-controls="pane-crp" data-tab="crp">
+    CRP Notes<span class="kbdHint">Alt+1</span>
+  </button>
+  <button type="button" class="tab" id="tab-tools" role="tab" aria-selected="false" aria-controls="pane-tools" data-tab="tools">
+    Tools<span class="kbdHint">Alt+2</span>
+  </button>
+  <button type="button" class="tab" id="tab-prompts" role="tab" aria-selected="false" aria-controls="pane-prompts" data-tab="prompts">
+    Prompts<span class="kbdHint">Alt+3</span>
+  </button>
+</nav>
+
+<script>
+(function(){
+  var h1   = document.querySelector('.brand'),
+      txt  = document.getElementById('brandType'),
+      full = txt.textContent,
+      reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches,
+      TYPE = true,
+      BASE = 90;
+
+  if (!TYPE || reduce || !full){
+    h1.classList.add('ver-in');
+    return;
+  }
+
+  txt.textContent = '';
+  h1.classList.add('typing');
+  var i = 0;
+  (function type(){
+    txt.textContent = full.slice(0, ++i);
+    if (i < full.length){
+      setTimeout(type, BASE + Math.random() * 70);
+    } else {
+      h1.classList.remove('typing');
+      setTimeout(function(){ h1.classList.add('ver-in'); }, 180);
+    }
+  })();
+})();
+
+(function(){
+  var el = document.getElementById('oemType');
+  if (!el) return;
+  var word = el.textContent;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var TYPE_MS   = 110,
+      HOLD_MS   = 2200,
+      ERASE_MS  = 55,
+      GAP_MS    = 700,
+      START_DELAY = 350;
+
+  if (reduce || !word) return;
+
+  setTimeout(function(){
+    el.textContent = '';
+    type(0);
+  }, START_DELAY);
+
+  function type(i){
+    el.textContent = word.slice(0, i + 1);
+    if (i + 1 < word.length){
+      setTimeout(function(){ type(i + 1); }, TYPE_MS + Math.random() * 60);
+    } else {
+      setTimeout(eraseAll, HOLD_MS);
+    }
+  }
+  function eraseAll(){
+    var n = word.length;
+    (function del(){
+      el.textContent = word.slice(0, --n);
+      if (n > 0){
+        setTimeout(del, ERASE_MS);
+      } else {
+        setTimeout(function(){ type(0); }, GAP_MS);
+      }
+    })();
+  }
+})();
+</script>
+
+<main class="wrap" id="pane-crp" role="tabpanel" aria-labelledby="tab-crp">
+
+  <form id="noteForm" class="sheet" autocomplete="off" onsubmit="return false" novalidate>
+
+    <section class="sec" data-sec="call">
+      <header class="sh"><span class="num">01</span><h2>Call</h2><span class="meta">case, then who picked up &mdash; blank prints N/A</span></header>
+      <div class="g">
+        <div class="s6">
+          <label class="lab" for="caseid">Case ID</label>
+          <input id="caseid" data-save spellcheck="false" autocapitalize="off" placeholder="paste SPRINKLR case ID">
+        </div>
+        <div class="s3">
+          <label class="lab" for="spoke">Spoke with</label>
+          <div class="withbtn">
+            <input id="spoke" data-save placeholder="customer name (blank if no one answered)">
+            <button type="button" class="nobtn" id="spellSpoke" title="Spell this name out (phonetics)">SPELL</button>
+          </div>
+        </div>
+        <fieldset class="rst s3" data-yn="obd">
+          <legend class="lab">OB Disclaimer</legend>
+          <div class="segwrap"></div>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="voucher">
+      <header class="sh"><span class="num">02</span><h2>Voucher</h2><span class="meta">offer, code and reason</span></header>
+      <div class="g">
+        <fieldset class="rst s3" data-yn="offered">
+          <legend class="lab">Offered voucher</legend>
+          <div class="segwrap"></div>
+        </fieldset>
+        <div class="s3">
+          <label class="lab" for="vcode">Voucher code given</label>
+          <div class="withbtn">
+            <input id="vcode" data-save spellcheck="false" autocapitalize="off" placeholder="type the code (blank prints N/A)">
+            <button type="button" class="nobtn" id="spellCode" title="Spell this code out (phonetics)">SPELL</button>
+          </div>
+          <div class="hin">Typing a code sets Offered voucher to Yes.</div>
+        </div>
+        <fieldset class="rst s3" data-yn="vdisc">
+          <legend class="lab">Voucher Disclaimer</legend>
+          <div class="segwrap"></div>
+        </fieldset>
+        <div class="s3">
+          <label class="lab" for="reason">Reason for declining the voucher</label>
+          <input id="reason" data-save placeholder="type the reason (blank prints N/A)">
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="wrap">
+      <header class="sh"><span class="num">03</span><h2>Wrap-up</h2><span class="meta">notes and products</span></header>
+      <div class="chips" id="qnChips"></div>
+      <div class="stack">
+        <label class="lab" for="notes">Additional notes</label>
+        <textarea id="notes" data-save rows="2" placeholder="anything else worth noting… (stays blank if empty)"></textarea>
+      </div>
+      <div class="g" style="margin-top:15px;">
+        <div class="s6">
+          <label class="lab" for="products">Product/s Offered</label>
+          <input id="products" data-save placeholder="products offered (blank prints N/A)">
+        </div>
+      </div>
+    </section>
+
+  </form>
+
+  <aside class="dock" aria-label="Generated notes">
+    <div class="dHead">
+      <span class="dTitle">NOTES DOCKET</span>
+      <span class="dLive" id="dLive"><i aria-hidden="true"></i><span id="dTxt">LIVE</span></span>
+    </div>
+
+    <pre id="preview" aria-label="Live preview of generated notes"></pre>
+
+    <hr class="perf">
+
+    <div class="dHead"><span class="dTitle">HAND-OFF COPY</span></div>
+
+    <div class="outBox" id="outBox">
+      <textarea id="output" spellcheck="false" aria-label="Editable generated notes"></textarea>
+    </div>
+    <div class="outStat" id="outStat"><i aria-hidden="true"></i><span id="outTxt">mirrors the form</span></div>
+
+    <button type="button" class="warnPill" id="warnPill" aria-label="Show pending warnings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span id="warnPillTxt">Check before copying</span>
+      <span class="wn" id="warnPillCount">0</span>
+    </button>
+
+    <div class="outBtns">
+      <button type="button" class="btn solid" id="genBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+        <span id="genTxt">Generate</span>
+      </button>
+      <button type="button" class="btn" id="copyBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="kbd">Ctrl / &#8984; + Enter regenerates &nbsp;&middot;&nbsp; Ctrl / &#8984; + Shift + Enter copies &nbsp;&middot;&nbsp; click ? for all shortcuts</div>
+  </aside>
+
+</main>
+
+<main class="wrap wide" id="pane-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
+  <div class="toolStack">
+
+    <!-- ============ PANEL 1 — DISCOUNT CALCULATOR ============ -->
+    <section class="panel" aria-labelledby="discTitle">
+      <header class="pH">
+        <span class="pn">A</span>
+        <h2 id="discTitle">Discount Calculator</h2>
+        <span class="pmeta">quote math</span>
+      </header>
+
+      <fieldset class="rst f6" style="margin-bottom:14px;" id="discModeFs">
+        <legend class="lab">Mode</legend>
+        <div class="segwrap" style="max-width:340px;">
+          <label><input type="radio" name="discMode" value="pct" checked><span>$ &rarr; %</span></label>
+          <label><input type="radio" name="discMode" value="price"><span>% &rarr; $</span></label>
+        </div>
+      </fieldset>
+
+      <div class="fRow">
+        <div class="fld f2">
+          <label class="lab" for="discOrig">Original price</label>
+          <div class="cur"><input id="discOrig" inputmode="decimal" placeholder="0.00"></div>
+        </div>
+        <div class="fld f2" id="discNewWrap">
+          <label class="lab" for="discNew">Discounted price</label>
+          <div class="cur"><input id="discNew" inputmode="decimal" placeholder="0.00"></div>
+        </div>
+        <div class="fld f2" id="discPctWrap" hidden>
+          <label class="lab" for="discPct">Discount %</label>
+          <input id="discPct" inputmode="decimal" placeholder="0">
+        </div>
+      </div>
+
+      <div class="quickPct" id="quickPctRow"></div>
+
+      <div class="resultBox" id="discResult">
+        <div class="empty">Enter a price to see the result…</div>
+      </div>
+
+      <div class="outBtns" style="margin-top:12px;">
+        <button type="button" class="btn solid" id="discCopyBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Copy result
+        </button>
+        <button type="button" class="btn" id="discClearBtn">Clear</button>
+      </div>
+    </section>
+
+    <!-- ============ PANEL 2 — AU TIME ZONES ============ -->
+    <section class="panel" aria-labelledby="tzTitle">
+      <header class="pH">
+        <span class="pn">B</span>
+        <h2 id="tzTitle">Australia &mdash; Live Clocks</h2>
+        <span class="pmeta">call when it's green</span>
+      </header>
+
+      <div class="clockHead">
+        <span>Your time (PH) &middot; <b id="phNow">&mdash;</b></span>
+        <span id="tzUpdated" style="font-size:11px;">&nbsp;</span>
+      </div>
+
+      <ul class="clockList" id="clockList"></ul>
+
+      <div class="legend">
+        <span><i style="background:var(--ok)"></i> 9am&ndash;5pm local &mdash; good to call</span>
+        <span><i style="background:var(--amber)"></i> 7&ndash;9am or 5&ndash;7pm &mdash; borderline</span>
+        <span><i style="background:var(--warn)"></i> outside &mdash; leave it</span>
+        <span style="margin-left:auto;">click a row to copy its time</span>
+      </div>
+    </section>
+
+    <!-- ============ PANEL 3 — CALLBACK CONVERTER ============ -->
+    <section class="panel" aria-labelledby="cbTitle">
+      <header class="pH">
+        <span class="pn">C</span>
+        <h2 id="cbTitle">Callback Converter</h2>
+        <span class="pmeta">PH &harr; AU</span>
+      </header>
+
+      <fieldset class="rst" style="margin-bottom:14px;" id="cbDirFs">
+        <legend class="lab">Convert</legend>
+        <div class="segwrap" style="max-width:340px;">
+          <label><input type="radio" name="cbDir" value="ph2au" checked><span>PH &rarr; AU</span></label>
+          <label><input type="radio" name="cbDir" value="au2ph"><span>AU &rarr; PH</span></label>
+        </div>
+      </fieldset>
+
+      <div class="fRow">
+        <div class="fld f2">
+          <label class="lab" for="cbTime" id="cbTimeLab">PH time</label>
+          <input id="cbTime" type="time" value="16:30" step="60">
+        </div>
+        <div class="fld f2">
+          <label class="lab" for="cbState">State</label>
+          <select id="cbState"></select>
+        </div>
+        <div class="fld f2">
+          <label class="lab" for="cbDate" id="cbDateLab">Date (PH)</label>
+          <input id="cbDate" type="date">
+        </div>
+      </div>
+
+      <div class="cbOut" id="cbOut"></div>
+
+      <div class="cbQuick" id="cbQuick"></div>
+      <div class="cbQuick" id="cbDayQuick"></div>
+
+      <div class="outBtns" style="margin-top:12px;">
+        <button type="button" class="btn solid" id="cbCopyBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Copy for note
+        </button>
+        <button type="button" class="btn" id="cbResetBtn">Now</button>
+      </div>
+    </section>
+
+    <!-- ============ PANEL 4 — PHONETIC SPELLING ============ -->
+    <section class="panel" aria-labelledby="phTitle">
+      <header class="pH">
+        <span class="pn">D</span>
+        <h2 id="phTitle">Phonetic Spelling</h2>
+        <span class="pmeta">names &amp; voucher codes</span>
+      </header>
+
+      <fieldset class="rst" style="margin-bottom:14px;" id="phModeFs">
+        <legend class="lab">Spell a</legend>
+        <div class="segwrap" style="max-width:340px;">
+          <label><input type="radio" name="phMode" value="name" checked><span>NAME</span></label>
+          <label><input type="radio" name="phMode" value="code"><span>VOUCHER CODE</span></label>
+        </div>
+      </fieldset>
+
+      <div class="fRow">
+        <div class="fld f4">
+          <label class="lab" for="phInput">Type it here</label>
+          <input id="phInput" placeholder="e.g. Juan Dela Cruz" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="fld f2" style="align-self:end;">
+          <button type="button" class="btn solid" id="phGo" style="width:100%;justify-content:center;">Spell it out</button>
+        </div>
+      </div>
+      <div class="hin">Press Enter or the button to open the spell-out window. Nothing typed here is saved.</div>
+    </section>
+
+  </div>
+</main>
+
+<main class="wrap wide" id="pane-prompts" role="tabpanel" aria-labelledby="tab-prompts" hidden>
+  <div class="toolStack">
+
+    <!-- ============ 01 — QUICK COPY COMMANDS ============ -->
+    <section class="panel" aria-labelledby="qcTitle">
+      <header class="pH">
+        <span class="pn">01</span>
+        <h2 id="qcTitle">Quick Copy Commands</h2>
+        <span class="pmeta">click a chip, paste, type after it</span>
+      </header>
+      <div class="cmdGrid" id="cmdGrid"></div>
+      <div class="hin">Paste the command into the AI chat, then type the details straight after it &mdash; e.g. <b>OBJ:</b> too expensive &nbsp;&middot;&nbsp; <b>NOTES:</b> M &mdash; fridge, 8yrs, liked bundle.</div>
+    </section>
+
+    <!-- ============ 02 — AI PROMPTS ============ -->
+    <section class="panel" aria-labelledby="apTitle">
+      <header class="pH">
+        <span class="pn">02</span>
+        <h2 id="apTitle">AI Prompts</h2>
+        <span class="pmeta">COPY grabs the whole prompt</span>
+      </header>
+      <div class="promptList" id="promptList"></div>
+      <div class="hin">COPY copies the full prompt without opening it. Click a title to read it here first. Setup: Stage 1 &rarr; Stage 2 once per pinned thread; the Session Opener starts every new day.</div>
+    </section>
+
+    <!-- ============ 03 — SYSTEM WORKFLOW ============ -->
+    <section class="panel" aria-labelledby="wfTitle">
+      <header class="pH">
+        <span class="pn">03</span>
+        <h2 id="wfTitle">System Workflow</h2>
+        <span class="pmeta">deployment checklist</span>
+      </header>
+      <ol class="flowList">
+        <li><b>Fresh thread, once:</b> paste Stage 1 &rarr; check its confirmation summary &rarr; paste Stage 2 &rarr; screenshot the command menu &rarr; pin the thread.</li>
+        <li><b>Daily:</b> open with the Session Opener &mdash; a fresh thread each morning, or whenever the pinned thread gets slow or loopy.</li>
+        <li><b>Between calls &mdash; the 60-second ritual:</b> NOTES: &rarr; FORK: &rarr; SEED: &rarr; EMAIL if consent was given. That&rsquo;s where your pipeline actually gets built.</li>
+      </ol>
+    </section>
+
+    <!-- ============ 04 — REMINDERS ============ -->
+    <section class="panel" aria-labelledby="remTitle">
+      <header class="pH">
+        <span class="pn">04</span>
+        <h2 id="remTitle">Reminders</h2>
+        <span class="pmeta">the non-negotiables</span>
+      </header>
+      <ul class="remList">
+        <li><b>EMAIL = NEVER READ BACK:</b> you are not allowed to verify, repeat, or spell the customer&rsquo;s email. The only phrasing is &ldquo;the email on your account&rdquo; &mdash; and never a line that hints at it.</li>
+        <li><b>FIRST NAMES ONLY:</b> nothing beyond a first name goes into the AI chat &mdash; no numbers, emails, or addresses.</li>
+        <li><b>NEVER INVENT:</b> no promo, price, or spec from memory &mdash; if it isn&rsquo;t verified, say so and verify it first.</li>
+        <li><b>TWO WINS, NO NEUTRAL ENDING:</b> every call lands WIN A (redemption now) or WIN B (seed + explicit permission + a trigger date). &ldquo;Just having a look&rdquo; with no seed and no permission is a missed B.</li>
+        <li><b>CROSS-DEVICE LENS:</b> a new-phone customer is an appliance prospect and the reverse &mdash; every discovery ends with the bridge question.</li>
+        <li><b>60-SECOND RITUAL:</b> between calls &mdash; NOTES: &rarr; FORK: &rarr; SEED: &rarr; EMAIL if consent was given. The pipeline is built here, not at end of shift.</li>
+      </ul>
+
+      <div class="remSub">When the thread drifts</div>
+      <ul class="remList">
+        <li><b>LOOPY / SLOW / WRONG SHAPES:</b> don&rsquo;t patch it &mdash; grab your pipeline notes out of the thread first, then open a fresh thread with the Session Opener.</li>
+        <li><b>STILL WRONG ON A FRESH THREAD:</b> only then rebuild with Stage 1 &rarr; Stage 2. If a brand-new thread misbehaves too, the prompt is the problem &mdash; get it patched.</li>
+        <li><b>PRE-EMPT IT:</b> rotate to a fresh thread at lunch whether or not you&rsquo;ve seen drift &mdash; ten seconds now beats debugging mangled replies at 3pm.</li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+
+<footer class="foot">
+  <span>Runs entirely offline &mdash; no customer details are saved.</span>
+  <span>Your edits in the copy box are held safe; press Generate to resync.</span>
+</footer>
+
+<!-- keyboard shortcuts modal -->
+<div class="ovl" id="kbOvl" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kbTitle">
+    <div class="mHead">
+      <span class="dTitle" id="kbTitle">KEYBOARD SHORTCUTS</span>
+      <button type="button" class="mClose" id="kbClose" aria-label="Close shortcuts">&times;</button>
+    </div>
+    <ul class="kbList">
+      <li class="kbHead">TABS</li>
+      <li><span class="keys">Alt + 1</span><span>Go to CRP Notes</span></li>
+      <li><span class="keys">Alt + 2</span><span>Go to Tools</span></li>
+      <li><span class="keys">Alt + 3</span><span>Go to Prompts</span></li>
+      <li class="kbHead">CRP NOTES</li>
+      <li><span class="keys">Ctrl / &#8984; + Enter</span><span>Generate notes (asks first if you edited the copy box)</span></li>
+      <li><span class="keys">Ctrl / &#8984; + Shift + Enter</span><span>Copy notes</span></li>
+      <li><span class="keys">Ctrl + X</span><span>Arm reset &mdash; press again to confirm</span></li>
+      <li><span class="keys">Ctrl / &#8984; + Z</span><span>Undo a reset (10 seconds, until you type)</span></li>
+      <li class="kbHead">OPENER</li>
+      <li><span class="keys">Alt + Q</span><span>Open your outbound scripts</span></li>
+      <li class="kbHead">DISCLAIMER</li>
+      <li><span class="keys">Alt + W</span><span>Open the voucher disclaimer</span></li>
+      <li class="kbHead">SPELLING</li>
+      <li><span class="keys">Enter</span><span>In the Tools spelling box: open the spell-out window</span></li>
+      <li class="kbHead">EVERYWHERE</li>
+      <li><span class="keys">Ctrl + &darr; / &uarr;</span><span>Scroll down / up</span></li>
+      <li><span class="keys">Esc</span><span>Close any open popup</span></li>
+    </ul>
+    <p class="mNote">Note-specific shortcuts only fire on the CRP Notes tab. Scroll shortcuts pause while you&rsquo;re in a dropdown or a notes field. Ctrl + X never hijacks normal text cutting, and the Alt shortcuts (tabs, Opener, Disclaimer) work everywhere.</p>
+  </div>
+</div>
+
+<!-- disclaimer modal -->
+<div class="ovl" id="discOvl" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="discTitle2">
+    <div class="mHead">
+      <span class="dTitle" id="discTitle2">VOUCHER DISCLAIMER</span>
+      <button type="button" class="mClose" id="discClose" aria-label="Close disclaimer">&times;</button>
+    </div>
+    <div class="discTag">READ TO CUSTOMER</div>
+    <div class="discBody" id="discBody"></div>
+    <div class="mBtns">
+      <button type="button" class="btn solid" id="discOk">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- outbound scripts modal (Alt+Q) -->
+<div class="ovl" id="opOvl" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="opTitle">
+    <div class="mHead">
+      <span class="dTitle" id="opTitle">OUTBOUND SCRIPTS</span>
+      <button type="button" class="mClose" id="opClose" aria-label="Close outbound scripts">&times;</button>
+    </div>
+
+    <div id="opView">
+      <div class="opTop">
+        <select id="opSelect" aria-label="Choose a script"></select>
+        <button type="button" class="btn" id="opEditBtn">EDIT</button>
+        <button type="button" class="btn" id="opAddBtn">ADD</button>
+      </div>
+      <div class="opSteps" id="opBody"></div>
+      <p class="mNote">Orange bits are placeholders &mdash; swap in the customer&rsquo;s name. EDIT / ADD manage your scripts; a blank line in the editor starts the next numbered step. Esc closes this window.</p>
+      <div class="mBtns">
+        <button type="button" class="btn" id="opDel">DEL</button>
+        <button type="button" class="btn solid" id="opOk">CLOSE</button>
+      </div>
+    </div>
+
+    <div id="opEditor" hidden>
+      <div class="opEd">
+        <div>
+          <label class="lab" for="opTitleIn">Script name</label>
+          <input id="opTitleIn" maxlength="40" placeholder="e.g. Opening Script / Voicemail / Callback confirm">
+        </div>
+        <div>
+          <label class="lab" for="opTextIn">Script &mdash; one blank line starts the next numbered step</label>
+          <textarea id="opTextIn" placeholder="[Customer Name] and [Name] highlight in the customer-facing view"></textarea>
+        </div>
+        <div>
+          <label class="lab" for="opNoteIn">Delivery note (optional &mdash; shows in the amber box)</label>
+          <textarea id="opNoteIn" placeholder="e.g. stress &ldquo;selected&rdquo;, pause after&hellip;"></textarea>
+        </div>
+      </div>
+      <div class="mBtns">
+        <button type="button" class="btn" id="opCancel">CANCEL</button>
+        <button type="button" class="btn solid" id="opSave">SAVE</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- phonetic spelling modal -->
+<div class="ovl" id="phOvl" hidden>
+  <div class="modal phWide" role="dialog" aria-modal="true" aria-labelledby="phTitle2">
+    <div class="mHead">
+      <span class="dTitle" id="phTitle2">SPELL IT OUT</span>
+      <button type="button" class="mClose" id="phClose" aria-label="Close spelling window">&times;</button>
+    </div>
+    <div class="discTag" id="phTag">NAME</div>
+    <div class="phText" id="phText"></div>
+    <div class="phGroups" id="phGroups"></div>
+    <p class="mNote">Click a tile to mark it as read. Esc closes this window.</p>
+    <div class="mBtns">
+      <button type="button" class="btn" id="phCopy">COPY</button>
+      <button type="button" class="btn" id="phClear">CLEAR MARKS</button>
+      <button type="button" class="btn solid" id="phOk">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- missing-details warning modal -->
+<div class="ovl" id="missOvl" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="missTitle">
+    <div class="mHead">
+      <span class="dTitle" id="missTitle">CHECK BEFORE COPYING</span>
+      <button type="button" class="mClose" id="missClose" aria-label="Close warning">&times;</button>
+    </div>
+    <ul class="kbList missList" id="missList"></ul>
+    <p class="mNote">Fix these before copying, or copy anyway if the note is right as it is.</p>
+    <div class="mBtns">
+      <button type="button" class="btn" id="missBack">GO BACK</button>
+      <button type="button" class="btn solid" id="missGo">COPY ANYWAY</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Tunables ---------- */
+const NA = 'N/A';
+const UNDO_MS = 10000;
+const NOTES_JOIN = '. ';
+const LEAD_LINE = 'ACQUIRE';
+const QUICK = [
+  ['qans',       'Answered'],
+  ['qrej',       'Rejected'],
+  ['qvm',        'Reached VM'],
+  ['qhangup',    'Cx Hang Up'],
+  ['qnotint',    'Cx not interested'],
+  ['qemail',     'Sent voucher email'],
+  ['qnocontact', 'Cx don\'t want to be contacted']
+];
+
+const DISCLAIMER_TEXT =
+  'Disclaimers: Please note that all vouchers will stay active for 3 months upon issuance. ' +
+  'It must be used in full in one single transaction and is valid for purchases of one item only. ' +
+  'Discount is not transferable, exchangeable, or redeemable for cash. ' +
+  'Not redeemable in conjunction with any other offer or promotional code unless otherwise specified. ' +
+  'Voucher codes are not applicable for purchases from any physical store, Samsung Education Store, ' +
+  'Samsung Business, Samsung Enhanced Partnership Portals and Samsung Government. ' +
+  'This promotion can also change without prior notice at the sole discretion of Samsung Australia. ' +
+  'Kindly read all other disclaimers online before your checkout.';
+
+/* ---------- Outbound scripts (Alt+Q popup) ----------
+   Scripts are edited and stored in the browser (localStorage) — the HTML
+   file itself is never changed by the popup. OPENER_DEFAULT seeds a fresh
+   machine and is restored automatically if the library is ever emptied. */
+const OPENER_DEFAULT = {
+  id: 'default',
+  title: 'Opening Script',
+  text: `Hi, this is Ivan, calling from Samsung. Am I speaking with [Customer Name]?
+
+Hey [Name] — thanks for taking my call. Just a heads-up, this call may be recorded for quality and training purposes.
+
+We're reaching out to selected Samsung users to make sure you know about the exclusive offers and vouchers for your account, so you don't miss out.
+
+There's no pressure to buy anything today, but if you find something interesting — for now, or for a future purchase — we can talk about possible next steps. Sounds good?`,
+  note: `Stress "selected" and "your account", pause half a beat after "so you don't miss out." That's it.`
+};
+
+/* ---------- Phonetic word lists (edit any word here) ----------
+   PH_WORDS covers letters and digits. The two symbol lists differ on purpose: names say "Hyphen",
+   codes say "Dash". PH_ALIKE groups look-alike characters; in Code mode they get a small NUMBER / LETTER tag. */
+const PH_WORDS = {
+  A:'Alpha', B:'Bravo', C:'Charlie', D:'Delta', E:'Echo', F:'Foxtrot', G:'Golf', H:'Hotel', I:'India',
+  J:'Juliet', K:'Kilo', L:'Lima', M:'Mike', N:'November', O:'Oscar', P:'Papa', Q:'Quebec', R:'Romeo',
+  S:'Sierra', T:'Tango', U:'Uniform', V:'Victor', W:'Whiskey', X:'X-ray', Y:'Yankee', Z:'Zulu',
+  '0':'Zero', '1':'One', '2':'Two', '3':'Three', '4':'Four', '5':'Five', '6':'Six', '7':'Seven', '8':'Eight', '9':'Nine'
+};
+const PH_SYMBOLS_NAME = { '-':'Hyphen', "'":'Apostrophe', '.':'Full stop', ',':'Comma' };
+const PH_SYMBOLS_CODE = { '-':'Dash', '_':'Underscore', '.':'Dot', '/':'Slash', '@':'At', '#':'Hash', '&':'Ampersand', '+':'Plus', '*':'Star' };
+const PH_ALIKE = ['0O', '1IL', '5S', '8B', '2Z'];
+
+/* ---------- Helpers ---------- */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.prototype.slice.call(r.querySelectorAll(s));
+const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+const chk = id => { const e = document.getElementById(id); return !!e && e.checked; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bl  = (label, v) => label + ': ' + (v || '');
+const nz  = v => v || NA;
+const oneLine = s => s.replace(/\s*\n\s*/g, ' ');
+
+const LS_T = 'acquire.theme';
+const LS_C = 'crp.count';
+const LS_TAB = 'crp.tab';
+
+/* =========================================================
+   TAB SYSTEM
+   ========================================================= */
+const TABS = ['crp', 'tools', 'prompts'];
+let activeTab = 'crp';
+try { const t = localStorage.getItem(LS_TAB); if (TABS.indexOf(t) >= 0) activeTab = t; } catch(e){}
+
+function setTab(name, focus){
+  if (TABS.indexOf(name) < 0) return;
+  activeTab = name;
+  TABS.forEach(t => {
+    const tabEl = document.getElementById('tab-' + t);
+    const paneEl = document.getElementById('pane-' + t);
+    const on = t === name;
+    tabEl.setAttribute('aria-selected', on ? 'true' : 'false');
+    tabEl.tabIndex = on ? 0 : -1;
+    paneEl.hidden = !on;
+  });
+  try { localStorage.setItem(LS_TAB, name); } catch(e){}
+  if (focus){ const el = document.getElementById('tab-' + name); if (el) el.focus(); }
+  if (name === 'tools') tickTools();
+}
+
+ $$('.tab').forEach(t => {
+  t.addEventListener('click', () => setTab(t.dataset.tab, false));
+  t.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+      e.preventDefault();
+      const i = TABS.indexOf(t.dataset.tab);
+      const n = e.key === 'ArrowRight' ? (i + 1) % TABS.length : (i - 1 + TABS.length) % TABS.length;
+      setTab(TABS[n], true);
+    }
+  });
+});
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+const IC_OK  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const IC_WARN= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
+function toast(msg, bad, act){
+  const box = $('#toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (bad ? ' bad' : '');
+  t.innerHTML = (bad ? IC_WARN : IC_OK) + '<span></span>';
+  t.querySelector('span').textContent = msg;
+  let gone = false;
+  const close = () => { if (gone) return; gone = true; t.classList.remove('in'); setTimeout(() => t.remove(), 320); };
+  if (act){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toastBtn'; b.textContent = act.label;
+    b.addEventListener('click', () => { close(); act.fn(); });
+    t.appendChild(b);
+    t.classList.add('act');
+  }
+  box.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('in'));
+  setTimeout(close, (act && act.ms) || 2400);
+  while (box.children.length > 3) box.removeChild(box.firstChild);
+  return { close: close };
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+ $('#themeBtn').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem(LS_T, next); } catch(e){}
+});
+
+/* =========================================================
+   NOTES TAB
+   ========================================================= */
+const YN_VALUES = ['Yes', 'No', NA];
+ $$('[data-yn]').forEach(fs => {
+  const name = fs.dataset.yn;
+  $('.segwrap', fs).innerHTML = YN_VALUES.map(v =>
+    '<label><input type="radio" name="' + name + '" value="' + v + '"' + (v === NA ? ' checked' : '') + '>' +
+    '<span>' + v.toUpperCase() + '</span></label>'
+  ).join('');
+});
+const YN_NAMES = $$('[data-yn]').map(fs => fs.dataset.yn);
+const yn = name => { const r = $('input[name=' + name + ']:checked'); return r ? r.value : NA; };
+
+ $('#qnChips').innerHTML = QUICK.map(q =>
+  '<label class="chip"><input type="checkbox" id="' + q[0] + '" data-save>' +
+  '<span class="tick" aria-hidden="true"></span>' + esc(q[1]) + '</label>'
+).join('');
+
+function capture(){
+  const o = {};
+  YN_NAMES.forEach(n => { o['__yn_' + n] = yn(n); });
+  $$('#noteForm [data-save]').forEach(el => { o[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+  return o;
+}
+function apply(o){
+  $$('#noteForm [data-save]').forEach(el => {
+    const v = o[el.id];
+    if (el.type === 'checkbox') el.checked = !!v;
+    else el.value = (typeof v === 'string') ? v : '';
+  });
+  YN_NAMES.forEach(n => {
+    const want = String(o['__yn_' + n] || NA).replace(/"/g, '\\"');
+    const r = $('input[name=' + n + '][value="' + want + '"]');
+    if (r) r.checked = true;
+  });
+}
+
+let codeFilled = false;
+ $('#vcode').addEventListener('input', () => {
+  const now = val('vcode') !== '';
+  if (now && !codeFilled && yn('offered') !== 'Yes'){
+    $('input[name=offered][value="Yes"]').checked = true;
+    toast('Offered voucher set to Yes');
+  }
+  codeFilled = now;
+});
+
+let TOKENS = [];
+function notesText(){
+  const parts = QUICK.filter(q => chk(q[0])).map(q => q[1]);
+  const typed = oneLine(val('notes'));
+  if (typed) parts.push(typed);
+  return parts.join(NOTES_JOIN);
+}
+function buildTokens(){
+  const T = [];
+  const push = (t, sec) => T.push({ t: t, s: sec || null });
+
+  push(LEAD_LINE, 'lead');
+
+  push(bl('Case ID',                          val('caseid')),       'call');
+  push(bl('Spoke with',                       nz(val('spoke'))),    'call');
+  push(bl('OB Disclaimer',                    yn('obd')),           'call');
+  push(bl('Offered voucher',                  yn('offered')),       'voucher');
+  push(bl('Voucher code given',               nz(val('vcode'))),    'voucher');
+  push(bl('Voucher Disclaimer',               yn('vdisc')),         'voucher');
+  push(bl('Reason for declining the voucher', nz(val('reason'))),   'voucher');
+  push(bl('Additional notes',                 notesText()),         'wrap');
+  push(bl('Product/s Offered',                nz(val('products'))), 'wrap');
+
+  TOKENS = T;
+  return T;
+}
+
+const prev = $('#preview'), out = $('#output'),
+      dLive = $('#dLive'), dTxt = $('#dTxt'),
+      outStat = $('#outStat'), outTxt = $('#outTxt'), outBox = $('#outBox');
+let linked = true;
+let activeSec = null;
+
+function updStat(){
+  dLive.classList.toggle('held', !linked);
+  outStat.classList.toggle('held', !linked);
+  dTxt.textContent  = linked ? 'LIVE' : 'HELD';
+  outTxt.textContent = linked
+    ? 'Mirrors the form — copy anytime.'
+    : 'Your manual edits are held. Press Generate to resync.';
+}
+function rawNote(){ return TOKENS.map(t => t.t).join('\n'); }
+
+function render(){
+  if (activeTab !== 'crp'){ buildTokens(); updateWarnPill(); return; }
+  const T = buildTokens();
+  prev.innerHTML = T.map(t =>
+    t.s ? '<span class="zz z-' + t.s + '">' + esc(t.t) + '</span>' : esc(t.t)
+  ).join('\n');
+  if (linked) out.value = rawNote();
+  updStat();
+  updateWarnPill();
+  if (activeSec) hot(activeSec, true);
+}
+let rt;
+function refreshSoon(){ clearTimeout(rt); rt = setTimeout(render, 90); }
+
+ $('#noteForm').addEventListener('input',  refreshSoon);
+ $('#noteForm').addEventListener('change', refreshSoon);
+out.addEventListener('input', () => { linked = false; updStat(); updateWarnPill(); });
+
+const form = $('#noteForm');
+function hot(sec, on){
+  $$('.zz', prev).forEach(z =>
+    z.classList.toggle('hot', !!on && sec !== undefined && z.classList.contains('z-' + sec)));
+}
+form.addEventListener('focusin', e => {
+  const s = e.target.closest('.sec');
+  if (s){ activeSec = s.dataset.sec; hot(activeSec, true); }
+});
+form.addEventListener('focusout', e => {
+  const s = e.target.closest('.sec');
+  if (s){ activeSec = null; hot(s.dataset.sec, false); }
+});
+
+const ctrEl = $('#noteCount');
+let noteTotal = 0;
+try { noteTotal = parseInt(localStorage.getItem(LS_C), 10) || 0; } catch(e){}
+ctrEl.textContent = noteTotal;
+function bumpCount(){
+  noteTotal++;
+  ctrEl.textContent = noteTotal;
+  try { localStorage.setItem(LS_C, String(noteTotal)); } catch(e){}
+}
+let lastCounted = '';
+function countIfNew(txt){
+  const n = txt.trim();
+  if (!n || n === lastCounted) return;
+  lastCounted = n;
+  bumpCount();
+}
+
+const rb = $('#resetBtn'), rsTxt = $('#rsTxt');
+let armTimer = null;
+function armReset(){
+  if (rb.classList.contains('armed')){
+    clearTimeout(armTimer);
+    rb.classList.remove('armed');
+    rsTxt.textContent = 'Reset';
+    resetAll();
+  } else {
+    rb.classList.add('armed');
+    rsTxt.textContent = 'Sure?';
+    armTimer = setTimeout(() => { rb.classList.remove('armed'); rsTxt.textContent = 'Reset'; }, 2600);
+  }
+}
+rb.addEventListener('click', armReset);
+
+let undoSnap = null, undoTimer = null, undoHandle = null;
+function dropUndo(){
+  clearTimeout(undoTimer);
+  undoSnap = null;
+  if (undoHandle){ undoHandle.close(); undoHandle = null; }
+}
+function takeSnapshot(){
+  const o = capture();
+  o.__held = !linked ? out.value : null;
+  return o;
+}
+function hasContent(o){
+  if (o.__held !== null) return true;
+  if (YN_NAMES.some(n => o['__yn_' + n] !== NA)) return true;
+  return Object.keys(o).some(k => k.indexOf('__') !== 0 &&
+    (o[k] === true || (typeof o[k] === 'string' && o[k].trim() !== '')));
+}
+function undoReset(){
+  if (!undoSnap) return;
+  const o = undoSnap;
+  dropUndo();
+  apply(o);
+  codeFilled = val('vcode') !== '';
+  linked = true;
+  disarmGen();
+  render();
+  if (o.__held !== null){ linked = false; out.value = o.__held; updStat(); updateWarnPill(); }
+  toast('Reset undone');
+}
+form.addEventListener('input',  dropUndo);
+form.addEventListener('change', dropUndo);
+out.addEventListener('input',   dropUndo);
+
+function resetAll(){
+  const snap = takeSnapshot();
+  const undoable = hasContent(snap);
+  $$('#noteForm [data-save]').forEach(el => {
+    if (el.type === 'checkbox') el.checked = false; else el.value = '';
+  });
+  YN_NAMES.forEach(n => { const r = $('input[name=' + n + '][value="' + NA + '"]'); if (r) r.checked = true; });
+  codeFilled = false;
+  linked = true;
+  clearTimeout(rt);
+  disarmGen();
+  render();
+  if (undoable){
+    dropUndo();
+    undoSnap = snap;
+    undoTimer = setTimeout(dropUndo, UNDO_MS);
+    undoHandle = toast('Form cleared', false, { label:'Undo', fn:undoReset, ms:UNDO_MS });
+  } else {
+    toast('Form cleared \u2014 ready for the next call');
+  }
+  $('#caseid').focus();
+}
+
+function generate(){
+  linked = true;
+  render();
+  outBox.classList.remove('flash');
+  void outBox.offsetWidth;
+  outBox.classList.add('flash');
+  toast('Notes regenerated');
+  if (!val('caseid')) toast('Reminder: Case ID is not entered', true);
+}
+
+const genBtn = $('#genBtn'), genTxt = $('#genTxt');
+let genTimer = null;
+function disarmGen(){ clearTimeout(genTimer); genBtn.classList.remove('armed'); genTxt.textContent = 'Generate'; }
+function requestGenerate(){
+  clearTimeout(rt); render();
+  const hasEdits = !linked && out.value !== rawNote();
+  if (!hasEdits || genBtn.classList.contains('armed')){ disarmGen(); generate(); return; }
+  genBtn.classList.add('armed');
+  genTxt.textContent = 'Overwrite edits?';
+  toast('Your edits in the copy box will be replaced \u2014 press Generate again to confirm', true);
+  genTimer = setTimeout(disarmGen, 3500);
+}
+genBtn.addEventListener('click', requestGenerate);
+
+function copyText(txt, label, failMsg, onOk){
+  const ok = () => { toast('Copied ' + label); if (onOk) onOk(); };
+  const fail = () => toast(failMsg || 'Copy blocked by browser', true);
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(() => fallback());
+  } else fallback();
+
+  function fallback(){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const done = document.execCommand('copy');
+      ta.remove();
+      done ? ok() : fail();
+    } catch(err){ fail(); }
+  }
+}
+
+/* ---------- Check-before-copy safety net ----------
+   VM is read from the chip state directly so the warning fires regardless of
+   how the Additional notes line was typed or edited. Text fallback remains.
+   Case ID only warns once the note has real content somewhere else, so a
+   pristine form never shows a nagging pill. */
+const LABELS = {
+  caseid:   'Case ID',
+  spoke:    'Spoke with',
+  obd:      'OB Disclaimer',
+  offered:  'Offered voucher',
+  vcode:    'Voucher code given',
+  vdisc:    'Voucher Disclaimer',
+  reason:   'Reason for declining the voucher',
+  notes:    'Additional notes',
+  products: 'Product/s Offered'
+};
+function parseNote(txt){
+  const lines = String(txt).split('\n'), got = {};
+  Object.keys(LABELS).forEach(k => {
+    const key = LABELS[k].toUpperCase() + ':';
+    const i = lines.findIndex(l => l.trim().toUpperCase().indexOf(key) === 0);
+    got[k] = i < 0 ? null : lines[i].slice(lines[i].indexOf(':') + 1).trim();
+  });
+  return got;
+}
+const isNA  = v => v === null || v === '' || /^n\/?a$/i.test(v);
+const isYes = v => /^yes$/i.test(v || '');
+
+function warnings(txt){
+  const g = parseNote(txt), W = [];
+  const na = k => isNA(g[k]), yes = k => isYes(g[k]);
+
+  const answered   = !na('spoke');
+  const vmFromChip = chk('qvm');
+  const vmFromText = /reached[\s\u00a0]*vm/i.test(g.notes || '');
+  const vm         = vmFromChip || vmFromText;
+  const codeGiven  = !na('vcode'), reasonGiven = !na('reason');
+
+  const noteStarted =
+    !na('caseid') || !na('spoke') || !na('obd') || !na('offered') ||
+    !na('vcode')  || !na('vdisc') || !na('reason') || !na('notes') || !na('products');
+  if (na('caseid') && noteStarted)
+    W.push('Case ID is not entered.');
+
+  if (vm && answered)
+    W.push('Reached VM is noted, but "Spoke with" has a name.');
+  if (answered && na('obd'))
+    W.push('You spoke with someone, but OB Disclaimer is still ' + NA + '.');
+  if (answered && na('offered'))
+    W.push('You spoke with someone, but "Offered voucher" is still ' + NA + '.');
+  if ((yes('offered') || codeGiven) && !yes('vdisc'))
+    W.push('Voucher offered or code given, but Voucher Disclaimer isn\u2019t Yes.');
+  if (yes('offered') && !codeGiven && !reasonGiven)
+    W.push('Voucher offered, but there\u2019s no code and no reason for declining.');
+  if (codeGiven && reasonGiven)
+    W.push('Both a voucher code and a decline reason are filled in \u2014 check which one is right.');
+  if (!yes('offered') && (codeGiven || reasonGiven || yes('vdisc')))
+    W.push('Voucher lines are filled in, but "Offered voucher" isn\u2019t Yes.');
+  return W;
+}
+
+const warnPill = $('#warnPill'), warnPillCount = $('#warnPillCount');
+function currentWarnings(){ return warnings(out.value); }
+function updateWarnPill(){
+  const w = currentWarnings();
+  warnPillCount.textContent = w.length;
+  warnPill.classList.toggle('on', w.length > 0);
+}
+warnPill.addEventListener('click', () => {
+  const w = currentWarnings();
+  if (!w.length){ toast('Nothing to check right now'); return; }
+  pendingCopy = null;
+  openMiss(w);
+});
+
+const missOvl = $('#missOvl'), missList = $('#missList'),
+      missGo = $('#missGo'), missBack = $('#missBack'), missClose = $('#missClose');
+let missLastFocus = null, pendingCopy = null;
+function openMiss(items){
+  missList.innerHTML = '';
+  items.forEach(f => {
+    const li = document.createElement('li');
+    const s = document.createElement('span');
+    s.className = 'mf';
+    s.textContent = f;
+    li.appendChild(s);
+    missList.appendChild(li);
+  });
+  missLastFocus = document.activeElement;
+  missOvl.hidden = false;
+  missBack.focus();
+}
+function closeMiss(){
+  missOvl.hidden = true;
+  if (missLastFocus && missLastFocus.focus) missLastFocus.focus();
+}
+missGo.addEventListener('click', () => { closeMiss(); if (pendingCopy) pendingCopy(); });
+missBack.addEventListener('click', closeMiss);
+missClose.addEventListener('click', closeMiss);
+missOvl.addEventListener('click', e => { if (e.target === missOvl) closeMiss(); });
+
+function doCopy(txt){
+  copyText(txt, '\u2014 ' + txt.length + ' characters', 'Copy blocked \u2014 select the text and press Ctrl+C', () => countIfNew(txt));
+}
+ $('#copyBtn').addEventListener('click', () => {
+  if (activeTab !== 'crp') setTab('crp', false);
+  clearTimeout(rt); render();
+  const txt = out.value;
+  if (!txt.trim()){ toast('Nothing to copy yet', true); return; }
+  const warn = warnings(txt);
+  if (warn.length){
+    pendingCopy = () => doCopy(txt);
+    openMiss(warn);
+  } else doCopy(txt);
+});
+
+const kbOvl = $('#kbOvl'), kbClose = $('#kbClose'), helpBtn = $('#helpBtn');
+let kbLastFocus = null;
+function openKb(){
+  kbLastFocus = document.activeElement;
+  kbOvl.hidden = false;
+  kbClose.focus();
+}
+function closeKb(){
+  kbOvl.hidden = true;
+  if (kbLastFocus && kbLastFocus.focus) kbLastFocus.focus();
+}
+helpBtn.addEventListener('click', openKb);
+kbClose.addEventListener('click', closeKb);
+kbOvl.addEventListener('click', e => { if (e.target === kbOvl) closeKb(); });
+
+const discOvl = $('#discOvl'), discClose = $('#discClose'),
+      discOk = $('#discOk'), discBody = $('#discBody'), discBtn = $('#discBtn');
+let discLastFocus = null;
+
+discBody.textContent = DISCLAIMER_TEXT;
+
+function openDisc(){
+  discLastFocus = document.activeElement;
+  discOvl.hidden = false;
+  discOk.focus();
+}
+function closeDisc(){
+  discOvl.hidden = true;
+  if (discLastFocus && discLastFocus.focus) discLastFocus.focus();
+}
+discBtn.addEventListener('click', openDisc);
+discClose.addEventListener('click', closeDisc);
+discOk.addEventListener('click', closeDisc);
+discOvl.addEventListener('click', e => { if (e.target === discOvl) closeDisc(); });
+
+/* =========================================================
+   OUTBOUND SCRIPTS  (Alt+Q popup — fully editable library)
+   ========================================================= */
+const OP_LS  = 'crp.openers';
+const OP_SEL = 'crp.openers.sel';
+
+let OPENERS = [];
+try {
+  const raw = JSON.parse(localStorage.getItem(OP_LS) || 'null');
+  if (Array.isArray(raw) && raw.length){
+    OPENERS = raw
+      .filter(s => s && typeof s.text === 'string')
+      .map(s => ({ id: String(s.id || ('o' + Date.now())), title: String(s.title || 'Untitled script'), text: String(s.text), note: String(s.note || '') }));
+  }
+} catch(e){}
+if (!OPENERS.length) OPENERS = [ Object.assign({}, OPENER_DEFAULT) ];
+
+let opCur = OPENERS[0].id, opPrev = null, opNewId = null, opEditing = false;
+try {
+  const s = localStorage.getItem(OP_SEL);
+  if (s && OPENERS.some(o => o.id === s)) opCur = s;
+} catch(e){}
+
+function opPersist(){ try { localStorage.setItem(OP_LS, JSON.stringify(OPENERS)); } catch(e){} }
+function opPersistSel(){ try { localStorage.setItem(OP_SEL, opCur); } catch(e){} }
+function opById(id){ return OPENERS.find(o => o.id === id); }
+function opNormalizeId(){ if (!opById(opCur)) opCur = OPENERS[0].id; }
+
+const opOvl = $('#opOvl'), opBody = $('#opBody'),
+      opOk = $('#opOk'), opClose = $('#opClose'), opBtn = $('#opBtn'),
+      opSelect = $('#opSelect'), opEditBtn = $('#opEditBtn'), opAddBtn = $('#opAddBtn'),
+      opDel = $('#opDel'), opView = $('#opView'), opEditor = $('#opEditor'),
+      opTitleIn = $('#opTitleIn'), opTextIn = $('#opTextIn'), opNoteIn = $('#opNoteIn'),
+      opCancel = $('#opCancel'), opSave = $('#opSave');
+let opLastFocus = null, opDelTimer = null;
+
+function fmtScript(s){
+  return esc(s).replace(/\[(Customer Name|Name)\]/g, '<b>[$1]</b>');
+}
+
+function opRenderView(){
+  opNormalizeId();
+  const cur = opById(opCur);
+  opSelect.innerHTML = OPENERS.map(o =>
+    '<option value="' + o.id + '"' + (o.id === opCur ? ' selected' : '') + '>' + esc(o.title) + '</option>'
+  ).join('');
+  const steps = cur.text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  opBody.innerHTML =
+    (steps.length
+      ? steps.map((s, i) =>
+          '<div class="opStep">' +
+            '<div class="osh"><span class="n">' + String(i + 1).padStart(2, '0') + '</span></div>' +
+            '<div class="t">' + fmtScript(s) + '</div>' +
+          '</div>'
+        ).join('')
+      : '<div class="opStep"><div class="t" style="font-style:italic;color:var(--mut);">This script is empty &mdash; press EDIT to write it.</div></div>') +
+    (cur.note ? '<div class="opNote"><b>DELIVERY:</b> ' + fmtScript(cur.note) + '</div>' : '');
+  opDel.classList.remove('armed');
+  opDel.textContent = 'DEL';
+}
+
+function opShowEditor(){
+  const cur = opById(opCur); if (!cur) return;
+  opTitleIn.value = cur.title;
+  opTextIn.value = cur.text;
+  opNoteIn.value = cur.note;
+  opEditing = true;
+  opView.hidden = true;
+  opEditor.hidden = false;
+  opTitleIn.focus();
+}
+function opShowView(){
+  opEditing = false;
+  opEditor.hidden = true;
+  opView.hidden = false;
+  opRenderView();
+}
+
+function openOp(){
+  opLastFocus = document.activeElement;
+  opOvl.hidden = false;
+  if (opEditing){ opSave.focus(); }          // reopen mid-edit: the draft is still in the fields
+  else { opShowView(); opOk.focus(); }
+}
+function closeOp(){
+  opOvl.hidden = true;
+  if (opLastFocus && opLastFocus.focus) opLastFocus.focus();
+}
+opBtn.addEventListener('click', openOp);
+opClose.addEventListener('click', closeOp);
+opOk.addEventListener('click', closeOp);
+opOvl.addEventListener('click', e => { if (e.target === opOvl) closeOp(); });
+
+opSelect.addEventListener('change', () => {
+  opCur = opSelect.value;
+  opPersistSel();
+  opRenderView();
+});
+opEditBtn.addEventListener('click', opShowEditor);
+
+opAddBtn.addEventListener('click', () => {
+  opPrev = opCur;
+  const s = { id: 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: '', text: '', note: '' };
+  OPENERS.push(s);
+  opNewId = s.id;
+  opCur = s.id;
+  opShowEditor();
+});
+
+opCancel.addEventListener('click', () => {
+  if (opNewId){                            // a brand-new script that was never saved — drop it
+    OPENERS = OPENERS.filter(o => o.id !== opNewId);
+    opNewId = null;
+    opCur = (opPrev && opById(opPrev)) ? opPrev : OPENERS[0].id;
+  }
+  opShowView();
+});
+
+opSave.addEventListener('click', () => {
+  const txt = opTextIn.value;
+  if (!txt.trim()){ toast('Write the script before saving', true); return; }
+  const cur = opById(opCur); if (!cur) return;
+  cur.title = opTitleIn.value.trim() || 'Untitled script';
+  cur.text = txt;
+  cur.note = opNoteIn.value.trim();
+  opNewId = null;
+  opPersist();
+  opPersistSel();
+  opShowView();
+  toast('Script saved');
+});
+
+opDel.addEventListener('click', () => {
+  if (OPENERS.length < 2){
+    toast('Add another script first \u2014 you can\u2019t delete the only one', true);
+    return;
+  }
+  if (!opDel.classList.contains('armed')){
+    opDel.classList.add('armed');
+    opDel.textContent = 'SURE?';
+    opDelTimer = setTimeout(() => { opDel.classList.remove('armed'); opDel.textContent = 'DEL'; }, 2600);
+    return;
+  }
+  clearTimeout(opDelTimer);
+  const i = OPENERS.findIndex(o => o.id === opCur);
+  OPENERS.splice(i, 1);
+  opCur = OPENERS[Math.min(i, OPENERS.length - 1)].id;
+  opPersist();
+  opPersistSel();
+  opShowView();
+  toast('Script deleted');
+});
+
+/* =========================================================
+   PHONETIC SPELLING  (popup for names and voucher codes)
+   ========================================================= */
+const phOvl = $('#phOvl'), phGroups = $('#phGroups'), phText = $('#phText'), phTag = $('#phTag'),
+      phOk = $('#phOk'), phClose = $('#phClose'), phCopy = $('#phCopy'), phClear = $('#phClear');
+let phLastFocus = null, phLine = '';
+
+function phTiles(raw, mode){                       // -> array of groups (one per space-separated part) of tiles
+  const symbols = mode === 'code' ? PH_SYMBOLS_CODE : PH_SYMBOLS_NAME;
+  return String(raw).trim().replace(/\s+/g, ' ').split(' ').map(part =>
+    Array.from(part).map(c => {
+      const u = c.toUpperCase();
+      let tag = '';
+      if (mode === 'code' && PH_ALIKE.some(g => g.indexOf(u) >= 0)) tag = /[0-9]/.test(u) ? 'NUMBER' : 'LETTER';
+      return { ch: u, word: PH_WORDS[u] || symbols[c] || symbols[u] || '', tag: tag };
+    })
+  );
+}
+function openPhonetic(raw, mode){
+  const text = String(raw || '').trim();
+  if (!text){ toast(mode === 'code' ? 'Type the voucher code first' : 'Type a name first', true); return; }
+  const shown = mode === 'code' ? text.toUpperCase() : text;
+  const groups = phTiles(text, mode);
+  phTag.textContent = mode === 'code' ? 'VOUCHER CODE' : 'NAME';
+  phText.textContent = shown;
+  phGroups.innerHTML = groups.map(g =>
+    '<div class="phGroup">' + g.map(t =>
+      '<button type="button" class="phTile" aria-pressed="false">' +
+        '<span class="ch">' + esc(t.ch) + '</span>' +
+        '<span class="wd">' + esc(t.word || 'symbol') + '</span>' +
+        (t.tag ? '<span class="tg">' + t.tag + '</span>' : '') +
+      '</button>').join('') + '</div>').join('');
+  phLine = shown + ' = ' + groups.map(g => g.map(t => t.word || t.ch).join(' ')).join(' / ');
+  phLastFocus = document.activeElement;
+  phOvl.hidden = false;
+  phOk.focus();
+}
+function closePh(){
+  phOvl.hidden = true;
+  if (phLastFocus && phLastFocus.focus) phLastFocus.focus();
+}
+phGroups.addEventListener('click', e => {           // click a tile to mark it as read
+  const b = e.target.closest('.phTile'); if (!b) return;
+  const on = !b.classList.contains('done');
+  b.classList.toggle('done', on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+});
+phClear.addEventListener('click', () => $$('.phTile.done', phGroups).forEach(b => {
+  b.classList.remove('done'); b.setAttribute('aria-pressed', 'false');
+}));
+phCopy.addEventListener('click', () => copyText(phLine, '\u2014 spelling', 'Copy blocked \u2014 select and press Ctrl+C'));
+phClose.addEventListener('click', closePh);
+phOk.addEventListener('click', closePh);
+phOvl.addEventListener('click', e => { if (e.target === phOvl) closePh(); });
+
+/* Tools-tab box: button or Enter opens the window */
+const phInput = $('#phInput');
+const phModeVal = () => { const r = $('input[name=phMode]:checked'); return r ? r.value : 'name'; };
+function phBoxOpen(){ openPhonetic(phInput.value, phModeVal()); }
+ $('#phGo').addEventListener('click', phBoxOpen);
+phInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); phBoxOpen(); }
+});
+ $$('input[name=phMode]').forEach(r => r.addEventListener('change', () => {
+  const code = phModeVal() === 'code';
+  phInput.style.textTransform = code ? 'uppercase' : '';
+  phInput.placeholder = code ? 'e.g. SAVE20-XK9' : 'e.g. Juan Dela Cruz';
+}));
+
+/* Notes-tab SPELL buttons: same window, using what is already typed in the field */
+ $('#spellSpoke').addEventListener('click', () => openPhonetic(val('spoke'), 'name'));
+ $('#spellCode').addEventListener('click',  () => openPhonetic(val('vcode'), 'code'));
+
+/* =========================================================
+   PROMPTS TAB  (commands, AI prompts)
+   ========================================================= */
+const CMD_ITEMS = [
+  { cmd:'OBJ:',     hint:'objection handling \u2014 \u201clatest device\u201d is the primary' },
+  { cmd:'DISC:',    hint:'device discovery \u2014 returns max 2 questions' },
+  { cmd:'C:',       hint:'one more cross-device probe' },
+  { cmd:'FORK:',    hint:'name the branch (A/B/C) + the exact line to say now' },
+  { cmd:'SEED:',    hint:'2 seed lines, each ending with a permission question' },
+  { cmd:'CLOSE',    hint:'one redemption-focused closing question' },
+  { cmd:'PIPE',     hint:'one pipeline question' },
+  { cmd:'EMAIL',    hint:'draft the consent-based follow-up email' },
+  { cmd:'NOTES:',   hint:'paste raw notes \u2192 Bucket A/B/C + seed + trigger' },
+  { cmd:'DEBRIEF:', hint:'deep coaching scored against the call flow' },
+  { cmd:'SHOW',     hint:'reprint a module in full \u2014 SHOW [module]' }
+];
+
+const PROMPTS = [
+  {
+    title:'STAGE 1 \u2014 Persona & Foundation (v2)',
+    short:'Stage 1 (v2) prompt',
+    tag:'paste FIRST in a brand-new thread',
+    text:`STAGE 1 OF 2 — PERSONA & FOUNDATION (v2). Do not build workflows yet. Absorb this,
+confirm your understanding, and ask me up to 3 questions about gaps.
+
+You are my live outbound sales copilot and executive assistant for my role at
+Samsung Australia. We build your workflows in Stage 2 — not yet.
+
+MY ROLE
+- Outbound sales agent, Samsung Australia. I call EXISTING Samsung customers to
+  introduce current promotions, uncover pain points, and issue discount vouchers
+  for online purchases.
+- KPI: I only earn commission when a customer REDEEMS the voucher.
+- REALITY (my gameplan): most customers are NOT ready to buy today. So every call
+  must land one of TWO wins — never a neutral ending:
+  WIN A — redemption on this call, or
+  WIN B — a seed planted + explicit permission to follow up + a trigger date
+  (promo rotation, device/contract age, appliance age).
+- Relationship selling: consented follow-up emails + personal pipeline for repeat
+  business. Phones cycle 2-3 years; appliances 8-15 — a brand-new-phone customer
+  is often an appliance prospect, and vice versa.
+
+CONTEXT I WORK WITH
+- On my screen: name, phone number, email on file ONLY. I do NOT know their
+  device — discovery must draw it out in conversation.
+- Scope: Galaxy mobile (phones, tablets, wearables) AND major home appliances
+  (fridges, laundry, dishwashers).
+- AU English, AUD, AU promos (trade-in, Samsung Care+, bundles, SmartThings).
+
+HARD RULES
+1. COMPLIANCE: I am NOT allowed to verify or read the customer's email back to
+   them. Never suggest a line that repeats, reads back, or spells the address.
+   Say "the email on your account".
+2. PRIVACY: first names only. Never ask me for numbers, emails, or addresses.
+3. Never invent promos, prices, or specs — tell me to verify instead.
+4. ANTI-REPETITION: never reuse a line within this session. Vary structure every
+   reply. Before answering any objection, silently classify: objection type
+   (timing / trust / price / need / channel / brush-off), customer temperature
+   from my notes (hot / warm / cold), and mirror my tone. Then pick ONE response
+   shape and rotate — question-led / empathy-led / insight-led / offer-led /
+   permission-led. If my input is vague, give 2 contrasting options.
+
+LIVE MODE — OUTPUT DISCIPLINE
+- I use you DURING live calls and BETWEEN calls. Seconds matter mid-call.
+- Live: max 3 lines, bullet fragments, no preamble, no summaries.
+- Deep analysis only when I say "debrief".
+
+YOUR TWO FUNCTIONS
+1. COACH — sharpen discovery, objection handling, seeding, closing, pipeline
+   building. Diagnose my call notes; flag missed buying signals and missed
+   cross-device opportunities (phone customer → appliance prospect).
+2. SECRETARY — structure raw notes into my pipeline format (Bucket A/B/C, seed,
+   permission, trigger), draft consent-based follow-up emails.
+
+CONFIRM: In under 150 words, summarise my role, the two wins, your functions,
+and the 4 hard rules. Then ask up to 3 questions.`
+  },
+  {
+    title:'STAGE 2 \u2014 Workflows (v2)',
+    short:'Stage 2 (v2) prompt',
+    tag:'paste only after Stage 1 is confirmed',
+    text:`STAGE 2 OF 2 — WORKFLOWS (v2). My persona is set. Build my live-call system.
+
+Internalise all 6 modules. Do NOT dump everything — show ONLY the Master Call
+Flow in full plus a 2-line summary of each other module. I'll type
+"SHOW [module]" for full detail.
+
+1. MASTER CALL FLOW — per stage: goal, 1-2 example lines, trigger to advance.
+   Opener (earn 30 seconds) → Purpose + promo hook → Device discovery (unknown —
+   draw it out conversationally, appliances included) → Pain exploration →
+   THE FORK:
+   - Branch A (buying signals): voucher tied to THEIR pain → redemption close —
+     drive action ON the call, don't settle for "I'll email it".
+   - Branch B (not ready): seed — plant one benefit, anchor to a trigger
+     (promo rotation / device or contract age / appliance age) → explicit
+     permission to follow up → best contact time.
+   - Branch C (hard no): graceful exit, zero pressure, log it.
+   If A or B with consent: email consent close — "the email on your account",
+   never read back.
+
+2. OBJECTION PLAYBOOK — obey Hard Rule 4 (anti-repetition engine) always.
+   PRIMARY OBJECTION — "I have the latest device / not in the market." When I
+   type "OBJ: latest device", respond in ≤2 lines: (1) agree & celebrate —
+   remove the sales-pressure frame; (2) pivot to the cycle gap ("is the fridge/
+   washer in the same fresh condition as your phone?") OR a household/ecosystem
+   gap (partner, kids, tablet, watch, Care+, SmartThings). One probe only.
+   "C:" = one more cross-device probe. Also internalised: busy, how did you get
+   my number, is this a scam, how much discount, bought recently, prefer
+   in-store, I'll think about it, too expensive, don't shop online.
+
+3. DEVICE DISCOVERY BANKS — 3 questions each for Galaxy phone, tablet, wearable,
+   fridge, washing machine, dishwasher — ordered easy → pain-revealing. Each bank
+   ends with ONE cross-device bridge question (phone → appliance and reverse).
+   "DISC: [device]" returns max 2 questions.
+
+4. FORK / SEED / CLOSE / PIPE —
+   "FORK:" — from my notes, name the branch (A/B/C) + the exact line to use now.
+   "SEED:" — 2 seed lines from my notes: one promo-anchored, one timing-anchored,
+   each ending with a permission question.
+   "CLOSE" — one redemption-focused closing question matched to our last exchange.
+   "PIPE" — one pipeline question. Keep a running pipeline note during our session.
+
+5. EMAIL DRAFTS — "EMAIL" drafts from my structured notes: subject line, warm AU
+   English, redemption CTA with urgency (Branch A) or value reminder + trigger
+   nudge (Branch B), opt-out line, placeholder [[email on file]] — never ask me
+   for the address, never include it in the text.
+
+6. NOTES + DEBRIEF — "NOTES: [raw]" returns: Situation / Device + age / Pain /
+   Objections / Buying signals / Bucket: A-B-C / Seed: benefit+category /
+   Permission: Y-N + timing / Trigger: date or event / Agreed next step /
+   Pipeline flags + one line on what I missed. "DEBRIEF: [notes]" — deep coaching
+   scored against the call flow.
+
+FINISH: show the Master Call Flow now, then list all commands as a compact menu
+I can screenshot and keep beside me: OBJ: / DISC: / C: / FORK: / SEED: / CLOSE /
+PIPE / EMAIL / NOTES: / DEBRIEF: / SHOW`
+  },
+  {
+    title:'SESSION OPENER \u2014 Daily Start',
+    short:'Session Opener prompt',
+    tag:'every new thread \u2014 daily, or when the pinned thread goes loopy',
+    text:`You are my live outbound sales copilot for Samsung Australia. I call existing
+customers with promos and vouchers — I earn only on REDEMPTION. Most customers
+aren't ready today, so every call lands one of TWO wins: (A) redemption now, or
+(B) seed + explicit permission + a trigger date. Scope: Galaxy mobile + major
+appliances — phones cycle 2-3 years, appliances 8-15, so a new-phone customer is
+often an appliance prospect. AU English, AUD.
+
+RULES: (1) Never repeat/spell out a customer's email — "the email on your
+account". (2) First names only, never request personal details. (3) Never invent
+promos/prices/specs. (4) Live mode: max 3 lines, fragments, no preamble; deep
+mode only on "debrief". (5) Never reuse a line this session; rotate question-led
+/ empathy-led / insight-led / offer-led / permission-led. (6) Before any
+objection reply, silently classify: type + customer temperature + my tone.
+
+COMMANDS: OBJ: / DISC: / C: / FORK: / SEED: / CLOSE / PIPE / EMAIL / NOTES: /
+DEBRIEF: / SHOW
+
+Confirm ONLY: "Ready" + one varied discovery question.`
+  }
+];
+
+const cmdGrid = $('#cmdGrid');
+cmdGrid.innerHTML = CMD_ITEMS.map((c, i) =>
+  '<button type="button" class="cmdChip" data-i="' + i + '">' +
+    '<b>' + esc(c.cmd) + '</b><small>' + esc(c.hint) + '</small>' +
+  '</button>'
+).join('');
+cmdGrid.addEventListener('click', e => {
+  const b = e.target.closest('.cmdChip'); if (!b) return;
+  const c = CMD_ITEMS[+b.dataset.i];
+  copyText(c.cmd + ' ', '\u2014 ' + c.cmd, 'Copy blocked \u2014 select and press Ctrl+C');
+});
+
+const promptList = $('#promptList');
+promptList.innerHTML = PROMPTS.map((p, i) =>
+  '<article class="promptCard" data-i="' + i + '">' +
+    '<div class="pcHead">' +
+      '<button type="button" class="pcToggle" aria-expanded="false">' +
+        '<b>' + esc(p.title) + '</b>' +
+        '<small>' + esc(p.tag) + '</small>' +
+        '<span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+      '</button>' +
+      '<button type="button" class="btn pcCopy">COPY</button>' +
+    '</div>' +
+    '<div class="pcBody" hidden><div class="pcText"></div></div>' +
+  '</article>'
+).join('');
+PROMPTS.forEach((p, i) => {
+  $('.pcText', promptList.children[i]).textContent = p.text;
+});
+promptList.addEventListener('click', e => {
+  const card = e.target.closest('.promptCard'); if (!card) return;
+  const i = +card.dataset.i;
+  if (e.target.closest('.pcCopy')){
+    copyText(PROMPTS[i].text, '\u2014 ' + PROMPTS[i].short, 'Copy blocked \u2014 select the text and press Ctrl+C');
+    return;
+  }
+  const tog = e.target.closest('.pcToggle');
+  if (!tog) return;
+  const body = $('.pcBody', card);
+  const willOpen = body.hidden;
+  body.hidden = !willOpen;
+  card.classList.toggle('open', willOpen);
+  tog.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+});
+
+/* =========================================================
+   GLOBAL SHORTCUTS
+   ========================================================= */
+document.addEventListener('keydown', e => {
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (e.key === 'Escape'){
+    if (!kbOvl.hidden){ closeKb(); return; }
+    if (!phOvl.hidden){ closePh(); return; }
+    if (!discOvl.hidden){ closeDisc(); return; }
+    if (!opOvl.hidden){ closeOp(); return; }
+    if (!missOvl.hidden){ closeMiss(); return; }
+  }
+
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.key === '1' || e.key === '2' || e.key === '3')){
+    e.preventDefault();
+    setTab(e.key === '1' ? 'crp' : e.key === '2' ? 'tools' : 'prompts', false);
+    return;
+  }
+
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q')){
+    e.preventDefault();
+    openOp();
+    return;
+  }
+
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyW' || e.key === 'w' || e.key === 'W')){
+    e.preventDefault();
+    openDisc();
+    return;
+  }
+
+  if (!kbOvl.hidden || !missOvl.hidden || !discOvl.hidden || !phOvl.hidden) return;
+
+  if (mod && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
+    const t = e.target;
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    e.preventDefault();
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollBy({
+      top: (e.key === 'ArrowDown' ? 1 : -1) * Math.round(window.innerHeight * 0.85),
+      behavior: reduce ? 'auto' : 'smooth'
+    });
+    return;
+  }
+
+  if (activeTab !== 'crp') return;
+
+  if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z') && undoSnap){ e.preventDefault(); undoReset(); return; }
+  if (mod && e.shiftKey && e.key === 'Enter'){ e.preventDefault(); $('#copyBtn').click(); return; }
+  if (mod && !e.shiftKey && e.key === 'Enter'){ e.preventDefault(); requestGenerate(); return; }
+
+  if (mod && (e.key === 'x' || e.key === 'X')){
+    const t = e.target;
+    const typing = t && (t.isContentEditable || t.tagName === 'TEXTAREA' ||
+      (t.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|range|color|file|image)$/.test(t.type)));
+    if (typing && (typeof t.selectionStart !== 'number' || t.selectionStart !== t.selectionEnd)) return;
+    e.preventDefault();
+    const wasArmed = rb.classList.contains('armed');
+    armReset();
+    if (!wasArmed) toast('Reset armed \u2014 press Ctrl+X again to confirm');
+  }
+});
+
+/* =========================================================
+   TOOLS TAB
+   ========================================================= */
+const PH_TZ = 'Asia/Manila';
+const STATES = [
+  { id:'east', label:'NSW / VIC / TAS / ACT', tz:'Australia/Sydney',   short:'AEDT/AEST' },
+  { id:'qld',  label:'QLD',                   tz:'Australia/Brisbane', short:'AEST' },
+  { id:'sa',   label:'SA / NT',               tz:'Australia/Adelaide', short:'ACDT/ACST' },
+  { id:'wa',   label:'WA',                    tz:'Australia/Perth',    short:'AWST' }
+];
+
+function zparts(date, tz){
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tz, hour12: false,
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', weekday:'short'
+  });
+  const p = {};
+  fmt.formatToParts(date).forEach(x => { p[x.type] = x.value; });
+  let hh = parseInt(p.hour, 10); if (hh === 24) hh = 0;
+  return {
+    y:+p.year, mo:+p.month, d:+p.day, h:hh, mi:+p.minute, s:+p.second,
+    wd:p.weekday
+  };
+}
+
+function fmt12(h, mi){
+  const ap = h >= 12 ? 'PM' : 'AM';
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return h12 + ':' + String(mi).padStart(2, '0') + ' ' + ap;
+}
+
+function zoneOffsetMin(date, tz){
+  const utcP = zparts(date, 'UTC');
+  const tzP  = zparts(date, tz);
+  const uMin = Date.UTC(utcP.y, utcP.mo-1, utcP.d, utcP.h, utcP.mi);
+  const tMin = Date.UTC(tzP.y,  tzP.mo-1,  tzP.d,  tzP.h,  tzP.mi);
+  return Math.round((tMin - uMin) / 60000);
+}
+function offLabel(min){
+  if (min === 0) return '±0h';
+  const sign = min > 0 ? '+' : '-';
+  const abs = Math.abs(min);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  if (m === 0) return sign + h + 'h';
+  if (m === 30) return sign + h + '.5h';
+  return sign + h + 'h' + String(m).padStart(2,'0');
+}
+
+function callLight(localMinutes){
+  if (localMinutes >= 540 && localMinutes < 1020) return 'ok';
+  if ((localMinutes >= 420 && localMinutes < 540) ||
+      (localMinutes >= 1020 && localMinutes < 1140)) return 'amber';
+  return 'red';
+}
+const LIGHT_LABEL = { ok:'CALL NOW', amber:'EARLY/LATE', red:'OFF HOURS' };
+
+const clockList = $('#clockList'), phNow = $('#phNow'), tzUpdated = $('#tzUpdated');
+
+clockList.innerHTML = STATES.map(s => (
+  '<li class="clockRow" data-tz="' + s.tz + '" data-label="' + esc(s.label) + '" tabindex="0" role="button" aria-label="Copy time for ' + esc(s.label) + '">' +
+    '<span class="dot" aria-hidden="true"></span>' +
+    '<span class="name">' + esc(s.label) + '<small>' + esc(s.short) + '</small></span>' +
+    '<span class="time">&mdash;</span>' +
+    '<span class="tz"></span>' +
+    '<span class="off"></span>' +
+    '<span class="badge">&mdash;</span>' +
+  '</li>'
+)).join('');
+
+function tickClocks(){
+  const now = new Date();
+
+  const phP = zparts(now, PH_TZ);
+  phNow.textContent = phP.wd + ' ' + phP.d + ' ' + monthName(phP.mo) + ', ' + fmt12(phP.h, phP.mi);
+
+  $$('.clockRow', clockList).forEach(row => {
+    const tz = row.dataset.tz;
+    const p  = zparts(now, tz);
+    const localMin = p.h * 60 + p.mi;
+    const light = callLight(localMin);
+    const off = zoneOffsetMin(now, tz) - zoneOffsetMin(now, PH_TZ);
+
+    row.querySelector('.dot').className = 'dot ' + light;
+    row.querySelector('.time').textContent = fmt12(p.h, p.mi);
+    row.querySelector('.tz').textContent   = abbrFor(tz, now);
+    row.querySelector('.off').textContent  = offLabel(off) + ' vs PH';
+    const badge = row.querySelector('.badge');
+    badge.className = 'badge ' + light;
+    badge.textContent = LIGHT_LABEL[light];
+  });
+
+  tzUpdated.textContent = 'updated ' + fmt12(phP.h, phP.mi) + ' PH';
+}
+function monthName(m){
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1];
+}
+function abbrFor(tz, date){
+  try {
+    const parts = new Intl.DateTimeFormat('en-AU', { timeZone: tz, timeZoneName:'short' }).formatToParts(date);
+    const name = parts.find(p => p.type === 'timeZoneName');
+    if (name && name.value) return name.value;
+  } catch(e){}
+  const s = STATES.find(x => x.tz === tz);
+  if (!s) return '';
+  const slash = s.short.indexOf('/');
+  if (slash < 0) return s.short;
+  const p = zparts(date, tz);
+  const inDst = p.mo >= 10 || p.mo <= 3;
+  return inDst ? s.short.slice(0, slash) : s.short.slice(slash + 1);
+}
+
+clockList.addEventListener('click', e => {
+  const row = e.target.closest('.clockRow'); if (!row) return;
+  copyRowTime(row);
+});
+clockList.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' '){
+    const row = e.target.closest('.clockRow'); if (!row) return;
+    e.preventDefault(); copyRowTime(row);
+  }
+});
+function copyRowTime(row){
+  const tz = row.dataset.tz;
+  const label = row.dataset.label;
+  const now = new Date();
+  const p = zparts(now, tz);
+  const abbr = abbrFor(tz, now);
+  const txt = label + ' \u2014 ' + fmt12(p.h, p.mi) + ' ' + abbr + ' (' + p.wd + ')';
+  copyText(txt, '\u2014 ' + label, 'Copy blocked \u2014 select and press Ctrl+C');
+}
+
+/* --- Discount calculator (no GST) --- */
+const discOrig   = $('#discOrig');
+const discNew    = $('#discNew');
+const discPct    = $('#discPct');
+const discNewWrap= $('#discNewWrap');
+const discPctWrap= $('#discPctWrap');
+const discResult = $('#discResult');
+const quickPctRow= $('#quickPctRow');
+
+const QUICK_PCTS = [5, 10, 15, 20, 25];
+quickPctRow.innerHTML = QUICK_PCTS.map(p => (
+  '<button type="button" class="pctChip" data-pct="' + p + '">' + p + '%</button>'
+)).join('');
+
+function parseMoney(s){
+  if (!s) return NaN;
+  const n = parseFloat(String(s).replace(/[^0-9.\-]/g, ''));
+  return isFinite(n) ? n : NaN;
+}
+function money(n){
+  if (!isFinite(n)) return '$0.00';
+  return '$' + n.toFixed(2);
+}
+function currentMode(){
+  const r = $('input[name=discMode]:checked');
+  return r ? r.value : 'pct';
+}
+function updateDiscMode(){
+  const mode = currentMode();
+  if (mode === 'pct'){
+    discNewWrap.hidden = false;
+    discPctWrap.hidden = true;
+  } else {
+    discNewWrap.hidden = true;
+    discPctWrap.hidden = false;
+  }
+  renderDisc();
+}
+ $$('input[name=discMode]').forEach(r => r.addEventListener('change', updateDiscMode));
+[discOrig, discNew, discPct].forEach(el => el.addEventListener('input', renderDisc));
+
+quickPctRow.addEventListener('click', e => {
+  const b = e.target.closest('.pctChip'); if (!b) return;
+  const pct = parseFloat(b.dataset.pct);
+  if (currentMode() !== 'price'){
+    $('input[name=discMode][value=price]').checked = true;
+    updateDiscMode();
+  }
+  discPct.value = String(pct);
+  renderDisc();
+});
+
+let lastDiscResult = '';
+function renderDisc(){
+  const mode = currentMode();
+  const orig = parseMoney(discOrig.value);
+  let pct, finalPrice, saved;
+
+  if (mode === 'pct'){
+    const newP = parseMoney(discNew.value);
+    if (!isFinite(orig) || !isFinite(newP) || orig <= 0){
+      discResult.innerHTML = '<div class="empty">Enter original and discounted price…</div>';
+      lastDiscResult = '';
+      return;
+    }
+    finalPrice = newP;
+    saved = orig - newP;
+    pct = saved / orig * 100;
+  } else {
+    const p = parseFloat(discPct.value);
+    if (!isFinite(orig) || !isFinite(p) || orig <= 0){
+      discResult.innerHTML = '<div class="empty">Enter original price and discount %…</div>';
+      lastDiscResult = '';
+      return;
+    }
+    pct = p;
+    saved = orig * p / 100;
+    finalPrice = orig - saved;
+  }
+
+  const pctStr = (Math.round(pct * 100) / 100).toFixed(2) + '%';
+
+  discResult.innerHTML =
+    '<div class="row big"><span>You save</span><b>' + money(saved) + ' <span style="color:var(--mut);font-weight:600;">(' + pctStr + ')</span></b></div>' +
+    '<div class="row big"><span>Customer pays</span><b>' + money(finalPrice) + '</b></div>' +
+    '<div class="sep"></div>' +
+    '<div class="row"><span>Original</span><b>' + money(orig) + '</b></div>';
+
+  lastDiscResult =
+    money(orig) + ' \u2192 ' + money(finalPrice) +
+    ' (' + pctStr + ' off, save ' + money(saved) + ')';
+}
+
+ $('#discCopyBtn').addEventListener('click', () => {
+  if (!lastDiscResult){ toast('Nothing to copy yet', true); return; }
+  copyText(lastDiscResult, '\u2014 discount result', 'Copy blocked \u2014 select and press Ctrl+C');
+});
+ $('#discClearBtn').addEventListener('click', () => {
+  discOrig.value = ''; discNew.value = ''; discPct.value = '';
+  renderDisc();
+  discOrig.focus();
+});
+
+/* --- Callback converter --- */
+const cbState = $('#cbState');
+const cbTime  = $('#cbTime');
+const cbDate  = $('#cbDate');
+const cbOut   = $('#cbOut');
+const cbQuick = $('#cbQuick');
+const cbTimeLab = $('#cbTimeLab');
+
+cbState.innerHTML = STATES.map(s => '<option value="' + s.id + '">' + esc(s.label) + '</option>').join('');
+
+const QUICK_TIMES = [
+  { h:9,  mi:0,  label:'9:00 AM' },
+  { h:12, mi:0,  label:'12:00 PM' },
+  { h:14, mi:0,  label:'2:00 PM' },
+  { h:16, mi:0,  label:'4:00 PM' }
+];
+cbQuick.innerHTML = QUICK_TIMES.map((q, i) => (
+  '<button type="button" class="pctChip" data-qi="' + i + '">' + q.label + '</button>'
+)).join('');
+
+function currentCbDir(){
+  const r = $('input[name=cbDir]:checked');
+  return r ? r.value : 'ph2au';
+}
+function stateById(id){ return STATES.find(s => s.id === id) || STATES[0]; }
+
+function wallTimeToUtc(y, mo, d, h, mi, tz){
+  let guess = Date.UTC(y, mo-1, d, h, mi, 0);
+  for (let i = 0; i < 2; i++){
+    const p = zparts(new Date(guess), tz);
+    const gotWall = Date.UTC(p.y, p.mo-1, p.d, p.h, p.mi);
+    const wantWall = Date.UTC(y, mo-1, d, h, mi);
+    guess += (wantWall - gotWall);
+  }
+  return new Date(guess);
+}
+function dayShift(date, days){
+  const d = new Date(date.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+let lastCbResult = '';
+let cbDateTouched = false;                       // once you pick a date yourself, it stops following "today"
+const pad2 = n => (n < 10 ? '0' : '') + n;
+function cbSrcTz(){ return currentCbDir() === 'ph2au' ? PH_TZ : stateById(cbState.value).tz; }
+function dateKey(p){ return p.y + '-' + pad2(p.mo) + '-' + pad2(p.d); }
+function dateLab(p){ return p.wd + ' ' + p.d + ' ' + monthName(p.mo); }
+function syncDefaultDate(){                      // default = today in the time zone you're typing the time in
+  if (!cbDateTouched) cbDate.value = dateKey(zparts(new Date(), cbSrcTz()));
+}
+function dayTag(p, tz){                          // " (today)" / " (tomorrow)" / " (yesterday)" or nothing
+  const t = zparts(new Date(), tz);
+  const diff = Math.round((Date.UTC(p.y, p.mo-1, p.d) - Date.UTC(t.y, t.mo-1, t.d)) / 86400000);
+  return diff === 0 ? ' (today)' : diff === 1 ? ' (tomorrow)' : diff === -1 ? ' (yesterday)' : '';
+}
+function renderCallback(){
+  const dir = currentCbDir();
+  const state = stateById(cbState.value);
+  const say = (t, bad) => { cbOut.innerHTML = '<div class="empty' + (bad ? ' bad' : '') + '">' + t + '</div>'; lastCbResult = ''; };
+
+  const m = cbTime.value.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return say('Pick a time…');
+  const dm = cbDate.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!dm) return say('Pick a date…');
+  const hh = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+
+  const srcTz  = dir === 'ph2au' ? PH_TZ : state.tz;
+  const srcUtc = wallTimeToUtc(+dm[1], +dm[2], +dm[3], hh, mi, srcTz);
+  const back = zparts(srcUtc, srcTz);
+  if (back.h !== hh || back.mi !== mi)
+    return say('That clock time doesn\u2019t exist on that date (daylight saving change) \u2014 pick another time.', true);
+
+  const phP    = zparts(srcUtc, PH_TZ);
+  const auP    = zparts(srcUtc, state.tz);
+  const auAbbr = abbrFor(state.tz, srcUtc);
+  const phAbbr = 'PH';
+
+  const phStr = fmt12(phP.h, phP.mi);
+  const auStr = fmt12(auP.h, auP.mi);
+  const phDay = dateLab(phP) + dayTag(phP, PH_TZ);
+  const auDay = dateLab(auP) + dayTag(auP, state.tz);
+
+  const terse =
+    'Callback ' + auStr.replace(' ', '') + ' ' + auAbbr + ' ' + dateLab(auP) +
+    ' = ' + phStr.replace(' ', '') + ' ' + phAbbr +
+    (dateKey(phP) === dateKey(auP) ? '' : ' ' + dateLab(phP));      // PH date only when it differs from the AU date
+  const past = srcUtc.getTime() < Date.now() - 60000
+    ? '<div class="cbSmall bad">That time has already passed.</div>' : '';
+
+  if (dir === 'ph2au'){
+    cbOut.innerHTML =
+      '<div class="cbLine">AU customer hears: <b>' + auStr + '</b> on ' + esc(auDay) + ' <span style="color:var(--mut);font-size:12px;">' + esc(state.label) + ' &middot; ' + esc(auAbbr) + '</span></div>' +
+      '<div class="cbSmall">That\'s <b>' + phStr + '</b> ' + esc(phAbbr) + ' (' + esc(phDay) + ') your time.</div>' + past +
+      '<div class="cbQuote" id="cbQuote">' + esc(terse) + '</div>';
+  } else {
+    cbOut.innerHTML =
+      '<div class="cbLine">When it\'s <b>' + auStr + '</b> on ' + esc(auDay) + ' for them <span style="color:var(--mut);font-size:12px;">(' + esc(state.label) + ' &middot; ' + esc(auAbbr) + ')</span>,</div>' +
+      '<div class="cbSmall">it\'s <b>' + phStr + '</b> ' + esc(phAbbr) + ' (' + esc(phDay) + ') your time.</div>' + past +
+      '<div class="cbQuote" id="cbQuote">' + esc(terse) + '</div>';
+  }
+  lastCbResult = terse;
+}
+ $$('input[name=cbDir]').forEach(r => r.addEventListener('change', () => {
+  const dir = currentCbDir();
+  cbTimeLab.textContent = dir === 'ph2au' ? 'PH time' : 'AU time';
+  $('#cbDateLab').textContent = dir === 'ph2au' ? 'Date (PH)' : 'Date (AU)';
+  syncDefaultDate();
+  renderCallback();
+}));
+cbState.addEventListener('change', () => { syncDefaultDate(); renderCallback(); });
+cbTime.addEventListener('input', renderCallback);
+cbDate.addEventListener('input',  () => { cbDateTouched = true; renderCallback(); });
+cbDate.addEventListener('change', () => { cbDateTouched = true; renderCallback(); });
+
+const cbDayQuick = $('#cbDayQuick');
+cbDayQuick.innerHTML =
+  '<button type="button" class="pctChip" data-day="0">Today</button>' +
+  '<button type="button" class="pctChip" data-day="1">Tomorrow</button>';
+cbDayQuick.addEventListener('click', e => {
+  const b = e.target.closest('.pctChip'); if (!b) return;
+  const n = parseInt(b.dataset.day, 10);
+  cbDateTouched = n !== 0;                        // "Today" goes back to following today
+  const p = zparts(new Date(), cbSrcTz());
+  const d = new Date(Date.UTC(p.y, p.mo-1, p.d + n));
+  cbDate.value = d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  renderCallback();
+});
+
+cbQuick.addEventListener('click', e => {
+  const b = e.target.closest('.pctChip'); if (!b) return;
+  const q = QUICK_TIMES[parseInt(b.dataset.qi, 10)];
+  if (!q) return;
+  cbTime.value = String(q.h).padStart(2,'0') + ':' + String(q.mi).padStart(2,'0');
+  renderCallback();
+});
+
+ $('#cbCopyBtn').addEventListener('click', () => {
+  if (!lastCbResult){ toast('Nothing to copy yet', true); return; }
+  copyText(lastCbResult, '\u2014 callback time', 'Copy blocked \u2014 select and press Ctrl+C');
+});
+ $('#cbResetBtn').addEventListener('click', () => {
+  const now = new Date();
+  const dir = currentCbDir();
+  const srcTz = dir === 'ph2au' ? PH_TZ : stateById(cbState.value).tz;
+  const p = zparts(now, srcTz);
+  cbTime.value = String(p.h).padStart(2,'0') + ':' + String(p.mi).padStart(2,'0');
+  cbDateTouched = false; syncDefaultDate();
+  renderCallback();
+});
+
+let toolsTimer = null;
+function tickTools(){
+  tickClocks();
+  syncDefaultDate();
+  renderCallback();
+}
+function startToolsTicker(){
+  if (toolsTimer) return;
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const every = reduce ? 60000 : 15000;
+  toolsTimer = setInterval(() => {
+    if (activeTab === 'tools') tickTools();
+  }, every);
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+render();
+updateDiscMode();
+syncDefaultDate();
+renderCallback();
+tickClocks();
+setTab(activeTab, false);
+startToolsTicker();
+
+})();
+</script>
+</body>
+</html>
