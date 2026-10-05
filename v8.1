@@ -185,7 +185,9 @@
     font-size:10px; letter-spacing:.11em; text-transform:uppercase;
     color:var(--mut); font-weight:700;
   }
-  .hin{ font-size:11px; color:var(--mut); margin-top:6px; }
+    .hin{ font-size:11px; color:var(--mut); margin-top:6px; }
+  .hin.ok{ color:var(--ok); font-weight:700; }
+  .hin.bad{ color:var(--warn); font-weight:700; }
 
   .unitBlock{ margin-bottom:15px; }
   .unitBlock .tog{ margin-bottom:9px; }
@@ -969,7 +971,7 @@
       </div>
     </section>
 
-    <!-- ============ PANEL 3 — CALLBACK CONVERTER ============ -->
+        <!-- ============ PANEL 3 — CALLBACK CONVERTER ============ -->
     <section class="panel" aria-labelledby="cbTitle">
       <header class="pH">
         <span class="pn">C</span>
@@ -984,6 +986,16 @@
           <label><input type="radio" name="cbDir" value="au2ph"><span>AU &rarr; PH</span></label>
         </div>
       </fieldset>
+
+      <div class="fRow" style="margin-bottom:14px;">
+        <div class="fld f2">
+          <label class="lab" for="cbPostcode">Customer postcode</label>
+          <input id="cbPostcode" inputmode="numeric" maxlength="4" autocomplete="off" spellcheck="false" placeholder="e.g. 4217">
+        </div>
+        <div class="fld f4" style="align-self:end;">
+          <div class="hin" id="cbPcHint">&nbsp;</div>
+        </div>
+      </div>
 
       <div class="fRow">
         <div class="fld f2">
@@ -2576,7 +2588,8 @@ const PH_TZ = 'Asia/Manila';
 const STATES = [
   { id:'east', label:'NSW / VIC / TAS / ACT', tz:'Australia/Sydney',   short:'AEDT/AEST' },
   { id:'qld',  label:'QLD',                   tz:'Australia/Brisbane', short:'AEST' },
-  { id:'sa',   label:'SA / NT',               tz:'Australia/Adelaide', short:'ACDT/ACST' },
+  { id:'sa',   label:'SA',                    tz:'Australia/Adelaide', short:'ACDT/ACST' },
+  { id:'nt',   label:'NT',                    tz:'Australia/Darwin',   short:'ACST' },
   { id:'wa',   label:'WA',                    tz:'Australia/Perth',    short:'AWST' }
 ];
 
@@ -2836,6 +2849,76 @@ function currentCbDir(){
   return r ? r.value : 'ph2au';
 }
 function stateById(id){ return STATES.find(s => s.id === id) || STATES[0]; }
+
+/* --- Postcode → AU state (offline range table) ---
+   Australian postcodes are state-scoped by design, so ranges are all a
+   timezone needs — no API, nothing leaves the page. Broken Hill (2880/2881)
+   is the one postcode cluster that runs on another state's clock, so it's
+   pinned to SA time explicitly. */
+const PC_TABLE = [
+  [200,  299,  'east', 'ACT'],
+  [800,  999,  'nt',   'NT'],
+  [1000, 2599, 'east', 'NSW'],
+  [2600, 2619, 'east', 'ACT'],
+  [2620, 2899, 'east', 'NSW'],
+  [2900, 2920, 'east', 'ACT'],
+  [2921, 2999, 'east', 'NSW'],
+  [3000, 3999, 'east', 'VIC'],
+  [4000, 4999, 'qld',  'QLD'],
+  [5000, 5999, 'sa',   'SA'],
+  [6000, 6999, 'wa',   'WA'],
+  [7000, 7999, 'east', 'TAS'],
+  [8000, 8999, 'east', 'VIC'],
+  [9000, 9999, 'qld',  'QLD']
+];
+function pcLookup(pc){
+  if (!/^\d{4}$/.test(pc)) return null;
+  const n = parseInt(pc, 10);
+  if (n === 2880 || n === 2881) return { group:'sa', name:'NSW (Broken Hill \u00b7 SA clock)' };
+  for (let i = 0; i < PC_TABLE.length; i++){
+    if (n >= PC_TABLE[i][0] && n <= PC_TABLE[i][1]) return { group: PC_TABLE[i][2], name: PC_TABLE[i][3] };
+  }
+  return null;
+}
+
+const cbPostcode = $('#cbPostcode');
+const cbPcHint   = $('#cbPcHint');
+let pcAppliedGroup = null;                       // state currently set from a postcode
+
+function setPcHint(msg, cls){
+  cbPcHint.textContent = msg || '';
+  cbPcHint.classList.remove('ok', 'bad');
+  if (cls) cbPcHint.classList.add(cls);
+}
+function applyPostcode(){
+  const pc = cbPostcode.value.trim();
+  if (!pc){ pcAppliedGroup = null; setPcHint(''); return; }
+  if (pc.length < 4){ setPcHint('Type all 4 digits\u2026'); return; }
+  const hit = pcLookup(pc);
+  if (!hit){
+    pcAppliedGroup = null;
+    setPcHint(pc + ' isn\u2019t in the standard AU ranges \u2014 pick the state manually.', 'bad');
+    return;
+  }
+  const grp = stateById(hit.group);
+  if (cbState.value !== grp.id){
+    cbState.value = grp.id;                      // programmatic set: no change event fires, so drive it by hand
+    syncDefaultDate();
+    renderCallback();
+  }
+  pcAppliedGroup = grp.id;
+  setPcHint(pc + ' \u2192 ' + hit.name + ' \u00b7 ' + abbrFor(grp.tz, new Date()), 'ok');
+}
+cbPostcode.addEventListener('input', () => {
+  cbPostcode.value = cbPostcode.value.replace(/\D+/g, '').slice(0, 4);
+  applyPostcode();
+});
+cbState.addEventListener('change', () => {       // a manual state pick overrides the postcode
+  if (pcAppliedGroup && cbState.value !== pcAppliedGroup){
+    pcAppliedGroup = null;
+    setPcHint('State set manually \u2014 postcode lookup overridden.');
+  }
+});
 
 function wallTimeToUtc(y, mo, d, h, mi, tz){
   let guess = Date.UTC(y, mo-1, d, h, mi, 0);
