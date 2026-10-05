@@ -2875,6 +2875,8 @@ function pcLookup(pc){
   if (!/^\d{4}$/.test(pc)) return null;
   const n = parseInt(pc, 10);
   if (n === 2880 || n === 2881) return { group:'sa', name:'NSW (Broken Hill \u00b7 SA clock)' };
+  if (n === 2898 || n === 2899) return null;   // Lord Howe / Norfolk — own clock, not a state's
+  if (n === 6798 || n === 6799) return null;   // Christmas / Cocos — Indian Ocean Territories
   for (let i = 0; i < PC_TABLE.length; i++){
     if (n >= PC_TABLE[i][0] && n <= PC_TABLE[i][1]) return { group: PC_TABLE[i][2], name: PC_TABLE[i][3] };
   }
